@@ -6,10 +6,12 @@ lxml>=4.9.0
 
 # Language detection and translation
 langdetect>=1.0.9
-deep-translator>=1.11.4
+# deep-translator removed (using local sentiment)
 
 # Sentiment analysis
-textblob>=0.17.1
+PySastrawi>=1.2.0
+nltk>=3.8.1
+# textblob removed
 
 # Database
 psycopg2-binary>=2.9.9

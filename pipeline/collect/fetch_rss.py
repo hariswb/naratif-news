@@ -9,9 +9,13 @@ import json
 
 logger = logging.getLogger(__name__)
 
-RSS_SOURCES = null
+RSS_SOURCES = None
 
-with open(Path("../../config/rss_sources.json")) as f:
+# Resolve config path relative to project root (assuming this file is in pipeline/collect/)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+CONFIG_PATH = PROJECT_ROOT / "config" / "rss_sources.json"
+
+with open(CONFIG_PATH) as f:
     RSS_SOURCES = json.load(f)
 
 def parse_published_date(entry):

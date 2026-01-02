@@ -2,60 +2,70 @@
 
 ## Overview
 
-This project implements a **daily, batch-oriented media monitoring pipeline** focused on **narrative intelligence**, not real-time analytics or dashboards.
+This project implements a **daily, batch-oriented media monitoring pipeline** focused on **narrative intelligence** for Indonesian news.
 
 The pipeline:
 
 * Collects news headlines from RSS feeds (XML)
 * Normalizes and cleans text
-* Extracts interpretable signals (sentiment, topics)
-* Aggregates signals into patterns
-* Produces **ready-to-read narrative outputs**
-
-The system prioritizes:
-
-* Reproducibility
-* Explainability
-* Clear separation of concerns
-* Minimal operational complexity
-
-Execution is manual or via `cron`.
-
----
+* Extracts interpretable signals (Sentiment using local Indonesian dictionary)
+* [Unimplemented] Aggregates signals into patterns
+* [Unimplemented] Produces **ready-to-read narrative outputs**
 
 ## Core Design Principles
 
-1. **Batch-first**
-   One run represents one snapshot of the media landscape.
-
-2. **Artifacts over processes**
-   Each stage produces concrete outputs that can be inspected and re-used.
-
-3. **Immutability**
-   Raw and intermediate artifacts are never mutated.
-
-4. **Narrative over metrics**
-   Numbers exist to support interpretation, not dashboards.
-
-5. **No premature orchestration**
-   The pipeline is linear and explicit.
+1. **Batch-first**: One run represents one snapshot of the media landscape.
+2. **Artifacts over processes**: Each stage produces concrete outputs (files/DB records).
+3. **Immutability**: Raw and intermediate artifacts are never mutated.
+4. **Narrative over metrics**: Numbers exist to support interpretation.
 
 ---
 
-## High-Level Pipeline Flow
+## How to Run
 
-```
-RSS XML
-→ Raw storage
-→ Parsed articles (JSONL)
-→ Cleaned canonical articles (DB)
-→ Article-level signals
-→ Aggregated media signals
-→ Narrative blocks
-→ Reader outputs
+### 1. Prerequisites
+- Python 3.10+
+- PostgreSQL (optional, for storage)
+
+### 2. Setup Phase
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-Each step depends only on artifacts produced upstream.
+### 3. Configuration
+The project uses `config/rss_sources.json` for source definitions.
+
+**Optional: Database Storage**
+To enable database storage:
+1. Create `config/db.env` with the following content:
+   ```env
+   DB_NAME=media_monitoring
+   DB_USER=postgres
+   DB_PASSWORD=your_password
+   DB_HOST=localhost
+   DB_PORT=5432
+   ```
+2. If this file is missing, the pipeline will run but skip the database storage step.
+
+### 4. Execute Pipeline
+
+```bash
+# Run the daily pipeline
+python3 run_daily.py
+```
+
+This will:
+1. Fetch RSS feeds to `data/runs/YYYY-MM-DD/raw/rss/`
+2. Parse them to `data/runs/YYYY-MM-DD/parsed/`
+3. Clean and normalize text
+4. Analyze sentiment (Positive/Negative/Neutral)
+5. Store results in DB (if configured) or log completion
 
 ---
 
@@ -63,212 +73,27 @@ Each step depends only on artifacts produced upstream.
 
 ```
 media-pipeline/
-├── run_daily.py
-├── config/
-│   ├── sources.yaml
-│   ├── db.env
-│   └── pipeline.yaml
-│
-├── data/
-│   └── runs/
-│       └── YYYY-MM-DD/
-│           ├── run_meta.json
-│           ├── raw/
-│           │   └── rss/
-│           │       ├── source_a.xml
-│           │       ├── source_b.xml
-│           │       └── source_c.xml
-│           ├── parsed/
-│           │   └── raw_articles.jsonl
-│           └── logs/
-│               └── pipeline.log
-│
+├── run_daily.py          # Orchestrator
+├── config/               # Configuration files
+├── data/                 # Data artifacts (runs, logs)
 ├── pipeline/
-│   ├── run.py
-│   ├── collect/
-│   │   └── fetch_rss.py
-│   ├── parse/
-│   │   └── rss_to_jsonl.py
-│   ├── clean/
-│   │   └── normalize_text.py
-│   ├── signal/
-│   │   ├── sentiment.py
-│   │   └── topics.py
-│   ├── aggregate/
-│   │   └── media_signals.py
-│   └── narrative/
-│       └── assemble.py
-│
-├── models/
-│   └── topic_model.pkl
-│
-├── sql/
-│   ├── schema.sql
-│   ├── daily_aggregates.sql
-│   └── narratives.sql
-│
-├── logs/
-│   └── pipeline.log
-│
-├── requirements.txt
-└── README.md
+│   ├── collect/          # RSS Fetching
+│   ├── parse/            # XML to JSONL
+│   ├── clean/            # Text Normalization
+│   ├── signal/           # Sentiment Analysis (PySastrawi)
+│   ├── aggregate/        # [Unimplemented] Aggregation
+│   └── narrative/        # [Unimplemented] Narrative generation
+├── sql/                  # Database schema
+└── requirements.txt
 ```
 
----
+## Implementation Details
 
-## Directory Responsibilities
+### Sentiment Analysis
+Uses a local dictionary-based approach specialized for Indonesian language (Sastrawi + Custom Dictionary).
+- **Positive/Negative Words**: Stored in `pipeline/signal/data/`
+- **Logic**: Counts weighted matches and normalizes score (-1, 0, 1).
 
-### Root
-
-**`run_daily.py`**
-Single entry point for the pipeline.
-Responsible only for:
-
-* Creating a `run_id`
-* Creating run folders
-* Executing pipeline stages in order
-
-No business logic lives here.
-
----
-
-### `config/`
-
-* `sources.yaml`
-  Defines RSS sources (name, URL, language).
-
-* `pipeline.yaml`
-  Runtime parameters (time window, topic count, model versions).
-
-* `db.env`
-  Database connection settings (never committed).
-
----
-
-### `data/runs/YYYY-MM-DD/`
-
-Run-scoped, immutable artifacts.
-
-* `run_meta.json`
-  Metadata tying outputs to a specific execution.
-
-* `raw/rss/`
-  Original RSS XML responses (source of truth).
-
-* `parsed/raw_articles.jsonl`
-  One article per line, minimally normalized.
-
-* `logs/`
-  Logs specific to this run.
-
----
-
-### `pipeline/`
-
-Core logic, organized strictly by stage.
-
-Each submodule:
-
-* Consumes upstream artifacts
-* Produces new artifacts
-* Does not reach across stages
-
-**Stages**
-
-* `collect/` — fetch RSS only
-* `parse/` — XML → JSONL
-* `clean/` — deterministic text normalization
-* `signal/` — sentiment & topic inference
-* `aggregate/` — outlet/topic-level aggregation
-* `narrative/` — human-readable summaries
-
----
-
-### `models/`
-
-Serialized models (e.g., topic models).
-No training code lives here.
-
----
-
-### `sql/`
-
-Explicit SQL used for:
-
-* Schema definition
-* Aggregation logic
-* Narrative assembly
-
-This keeps semantic decisions visible and auditable.
-
----
-
-### `logs/`
-
-Global logs for infrastructure-level debugging.
-
----
-
-## Storage Model
-
-* **Filesystem**
-
-  * Raw XML
-  * Parsed JSONL
-  * Logs
-  * Immutable run artifacts
-
-* **Database**
-
-  * Canonical articles
-  * Signals
-  * Aggregations
-  * Narrative blocks
-
-The database is **not** used for raw ingestion.
-
----
-
-## Execution Model
-
-The pipeline is executed once per morning:
-
-```bash
-python run_daily.py
-```
-
-or via cron:
-
-```bash
-0 7 * * * /usr/bin/python /path/to/run_daily.py
-```
-
-Each run:
-
-* Is isolated
-* Can be re-run safely
-* Produces a complete, self-contained snapshot
-
----
-
-## What This Architecture Intentionally Avoids
-
-* Streaming / real-time processing
-* Dashboard-first design
-* Hidden model state
-* Implicit recomputation
-* Tight coupling between stages
-
----
-
-## Mental Model
-
-> **Raw text → Signals → Patterns → Narratives**
-
-If a component does not clearly belong to one of these stages, it does not belong in the pipeline.
-
----
-
-This README defines the **contract of the system**.
-Implementation details may evolve, but these boundaries should not.
-
+### Storage
+- **File System**: Used for raw XML and intermediate JSONL files.
+- **PostgreSQL**: Used for structured article data and signal scores.

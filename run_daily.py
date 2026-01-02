@@ -21,7 +21,7 @@ sys.path.append(str(Path(__file__).parent))
 
 from pipeline.collect.fetch_rss import collect_all_rss
 from pipeline.parse.rss_to_jsonl import parse_to_jsonl, load_jsonl
-from pipeline.clean.normalize_text import clean_articles
+from pipeline.clean.normalize import clean_articles
 from pipeline.signal.sentiment import analyze_all_sentiments
 from pipeline.db import get_db_connection, create_pipeline_run, update_pipeline_run, insert_articles, insert_run_statistics
 
