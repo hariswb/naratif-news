@@ -99,7 +99,7 @@ media-pipeline/
 │   ├── collect/          # RSS Fetching
 │   ├── parse/            # XML to JSONL
 │   ├── clean/            # Text Normalization
-│   ├── signal/           # Sentiment Analysis (PySastrawi)
+│   ├── signal/           # Sentiment Analysis, Topic Modelling
 │   ├── aggregate/        # [Unimplemented] Aggregation
 │   └── narrative/        # [Unimplemented] Narrative generation
 ├── sql/                  # Database schema
@@ -108,11 +108,45 @@ media-pipeline/
 
 ## Implementation Details
 
+### Run Daily (Orchestrator)
+The `run_daily.py` script manages the sequential execution of the pipeline:
+- **Run Management**: Generates a daily `run_id` and creates the directory structure (`data/runs/YYYY-MM-DD/`).
+- **Metadata**: Tracks stage status and statistics in `run_meta.json`.
+- **Database**: Updates `pipeline_runs` with progress and stats.
+- **Logging**: Maintains run-specific logs.
+
+### Collect
+Located in `pipeline/collect/fetch_rss.py`.
+- **Function**: Iterates through sources in `config/rss_sources.json`.
+- **Artifacts**: Saves raw XML responses to `data/runs/{run_id}/raw/rss/`.
+- **Processing**: extracts title, link, summary, and publish date; handles timeouts.
+
+### Parse
+Located in `pipeline/parse/rss_to_jsonl.py`.
+- **Function**: Standardizes raw articles into a common format.
+- **Artifacts**: Writes to `data/runs/{run_id}/parsed/raw_articles.jsonl`.
+- **Format**: JSON Lines (JSONL) with ISO-formatted dates.
+
+### Clean
+Located in `pipeline/clean/normalize.py`.
+- **Text Normalization**: Strips HTML tags and normalizes whitespace.
+- **Deduplication**: Uses MD5 hash of `title|summary` to remove exact duplicates.
+- **Language Filter**: Uses `langdetect` to keep only Indonesian (`id`) articles.
+
 ### Sentiment Analysis
 Uses a local dictionary-based approach specialized for Indonesian language (Sastrawi + Custom Dictionary).
 - **Positive/Negative Words**: Stored in `pipeline/signal/data/`
 - **Logic**: Counts weighted matches and normalizes score (-1, 0, 1).
 
-### Storage
-- **File System**: Used for raw XML and intermediate JSONL files.
-- **PostgreSQL**: Used for structured article data and signal scores.
+### Topic Modelling
+Uses Latent Dirichlet Allocation (LDA) to discover abstract topics within the collected news articles.
+- **Library**: `scikit-learn` (TfidfVectorizer, LatentDirichletAllocation)
+- **Preprocessing**: 
+  - Acronym expansion (e.g., "KPK" -> "Komisi Pemberantasan Korupsi")
+  - Custom stopword removal (Indonesian)
+  - Text cleaning (lowercase, punctuation/number removal)
+- **Output**: Assigns a dominant topic index and top keywords to each article.
+- **Example Result**:
+  - *Topic 1*: pembangunan, anggaran, pajak, sisa, kerja, lebaran, piala, timnas, asia, indonesia
+  - *Topic 2*: prabowo, megawati, jadwal, pertemuan, indonesia, partai, kereta, api, merah, presiden
+  - *Topic 3*: trump, tarif, amerika, serikat, indonesia, impor, prabowo, republik, china, undang
