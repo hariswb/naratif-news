@@ -34,8 +34,6 @@ class TopicModeller:
             if stopwords_path.exists():
                 stopwords_df = pd.read_csv(stopwords_path, header=None)
                 self.stopwords = stopwords_df[0].tolist()
-                # Add custom stopwords from legacy script
-                self.stopwords += ['baiknya', 'berkali', 'kali', 'kurangnya', 'mata', 'olah', 'sekurang', 'setidak', 'tama', 'tidaknya']
             else:
                 logger.warning(f"Stopwords file not found at {stopwords_path}")
                 self.stopwords = []
@@ -85,14 +83,26 @@ class TopicModeller:
         
         return text
 
-    def perform_modelling(self, articles_df):
+    def perform_modelling(self, articles):
         """
-        Perform LDA topic modelling on the provided DataFrame of articles.
-        articles_df should have columns: 'id', 'title'
+        Perform LDA topic modelling on the provided list of articles.
+        articles: list of dicts, each must have 'id' and 'title'.
         """
-        if articles_df.empty:
+        if not articles:
             logger.warning("No articles to process.")
             return []
+            
+        # Convert to DataFrame
+        articles_df = pd.DataFrame(articles)
+        
+        if 'title' not in articles_df.columns:
+            logger.error("Articles data missing 'title' column.")
+            return []
+        
+        # Ensure ID exists, if not generate or use index (but prefer ID for mapping)
+        if 'id' not in articles_df.columns:
+             # If no ID, we can't map back easily, but let's proceed with index
+             articles_df['id'] = articles_df.index
 
         # Preprocess texts
         articles_df['clean_text'] = articles_df['title'].apply(self.preprocess_text)
@@ -133,27 +143,21 @@ class TopicModeller:
             
         return results
 
-def run_topic_modelling(db_conn, run_id=None):
+def analyze_topics(articles):
     """
-    Fetch articles from DB, perform topic modelling, and return results.
-    Does NOT insert into DB for now.
+    Perform topic modelling on a list of article dictionaries.
+    
+    Args:
+        articles (list): List of dicts with 'id' and 'title'.
+        
+    Returns:
+        list: List of result dicts with article_id, topic_index, keywords.
     """
-    query = "SELECT id, title, source, published_at FROM articles"
-    # If we want to filter by run_id or date, we can add WHERE clause here
-    # For now fetching all as requested ("read articles in our postgres ...")
-    
-    try:
-        df = pd.read_sql(query, db_conn.conn)
-    except Exception as e:
-        logger.error(f"Failed to fetch articles from DB: {e}")
-        return []
-    
-    if df.empty:
-        logger.info("No articles found in database.")
+    if not articles:
         return []
 
     modeller = TopicModeller()
-    results = modeller.perform_modelling(df)
+    results = modeller.perform_modelling(articles)
     
     logger.info(f"Topic modelling completed for {len(results)} articles.")
     return results
@@ -175,7 +179,13 @@ if __name__ == "__main__":
     try:
         db_conn = get_db_connection()
         with db_conn:
-            results = run_topic_modelling(db_conn)
+            # Fetch articles manually for testing
+            import pandas as pd
+            query = "SELECT id, title FROM articles"
+            df = pd.read_sql(query, db_conn.conn)
+            articles = df.to_dict('records')
+            
+            results = analyze_topics(articles)
             print(f"Generated {len(results)} results.")
             if results:
                 print("Sample result:", results[0])
