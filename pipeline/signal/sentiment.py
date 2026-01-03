@@ -15,7 +15,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-class IndinesianSentimentAnalyzer:
+class Inset:
+    """
+    Inset means 'Indonesia Sentiment Lexicon'.
+    """
+    METHOD_NAME = 'inset'
+
     def __init__(self):
         self.positive_dict = {}
         self.negative_dict = {}
@@ -136,6 +141,7 @@ class IndinesianSentimentAnalyzer:
             label = "negative"
             
         return {
+            "method": self.METHOD_NAME,
             "polarity": normalized_score,
             "subjectivity": 0.0, # Dictionary approach doesn't easily yield subjectivity
             "label": label,
@@ -148,7 +154,7 @@ _analyzer = None
 def get_analyzer():
     global _analyzer
     if _analyzer is None:
-        _analyzer = IndinesianSentimentAnalyzer()
+        _analyzer = Inset()
     return _analyzer
 
 def analyze_article_sentiment(article):

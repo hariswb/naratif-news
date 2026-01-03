@@ -15,6 +15,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 import sys
+import argparse
 
 # Add pipeline modules to path
 sys.path.append(str(Path(__file__).parent))
@@ -22,15 +23,17 @@ sys.path.append(str(Path(__file__).parent))
 from pipeline.collect.fetch_rss import collect_all_rss
 from pipeline.parse.rss_to_jsonl import parse_to_jsonl, load_jsonl
 from pipeline.clean.normalize import clean_articles
-from pipeline.signal.sentiment import analyze_all_sentiments
-from pipeline.db import get_db_connection, create_pipeline_run, update_pipeline_run, insert_articles, insert_run_statistics
+from pipeline.signal.sentiment import analyze_all_sentiments, Inset
+from pipeline.db import (
+    get_db_connection, create_pipeline_run, update_pipeline_run, 
+    insert_articles, insert_run_statistics, insert_sentiment_results
+)
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/pipeline.log'),
         logging.StreamHandler()
     ]
 )
@@ -58,7 +61,7 @@ def save_run_metadata(run_dir, metadata):
         json.dump(metadata, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved run metadata to {metadata_path}")
 
-def run_pipeline():
+def run_pipeline(limit=None, test_mode=False):
     """Execute the complete pipeline."""
     # Generate run ID
     run_date = datetime.now().date()
@@ -66,10 +69,13 @@ def run_pipeline():
     
     logger.info(f"=" * 60)
     logger.info(f"Starting pipeline run: {run_id}")
+    if test_mode:
+        logger.info("RUNNING IN TEST MODE")
     logger.info(f"=" * 60)
     
     # Create run directory
-    run_dir = Path("data/runs") / run_id
+    base_dir = Path("tests/data/runs") if test_mode else Path("data/runs")
+    run_dir = base_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     
     # Create logs directory
@@ -89,6 +95,8 @@ def run_pipeline():
     try:
         db_conn = get_db_connection()
         db_conn.connect()
+        # In test mode, we might want to ensure we are connected to the test DB?
+        # The env vars should be set by the caller (docker-compose or shell)
         create_pipeline_run(db_conn, run_id, run_date)
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
@@ -102,6 +110,12 @@ def run_pipeline():
         logger.info("=" * 60)
         
         articles, collect_stats = collect_all_rss(run_dir)
+        
+        if limit and len(articles) > limit:
+            logger.info(f"Limiting articles to {limit} (originally {len(articles)})")
+            articles = articles[:limit]
+            collect_stats['total_articles'] = len(articles)
+
         metadata['stages']['collect'] = {
             "status": "completed",
             "stats": collect_stats,
@@ -145,6 +159,7 @@ def run_pipeline():
         logger.info("=" * 60)
         
         cleaned_articles, clean_stats = clean_articles(articles)
+        
         metadata['stages']['clean'] = {
             "status": "completed",
             "stats": clean_stats,
@@ -160,9 +175,18 @@ def run_pipeline():
         
         logger.info(f"✓ Clean stage completed: {clean_stats['indonesian_only']} articles")
         
-        # STAGE 4: SIGNAL (Sentiment Analysis)
+        # STAGE 4: STORE ARTICLES (New Flow)
+        url_to_id = {}
+        if db_conn:
+            logger.info("\n" + "=" * 60)
+            logger.info("STAGE 4: STORE ARTICLES")
+            logger.info("=" * 60)
+            url_to_id = insert_articles(db_conn, cleaned_articles, run_id, run_date)
+            logger.info(f"✓ Stored {len(url_to_id)} articles in database")
+        
+        # STAGE 5: SIGNAL (Sentiment Analysis)
         logger.info("\n" + "=" * 60)
-        logger.info("STAGE 4: SIGNAL - Analyzing sentiment")
+        logger.info("STAGE 5: SIGNAL - Analyzing sentiment")
         logger.info("=" * 60)
         
         articles_with_sentiment, signal_stats = analyze_all_sentiments(cleaned_articles)
@@ -174,23 +198,36 @@ def run_pipeline():
         save_run_metadata(run_dir, metadata)
         
         if db_conn:
+            # Prepare sentiment results for storage
+            sentiment_results = []
+            for article in articles_with_sentiment:
+                url = article.get('url')
+                article_id = url_to_id.get(url)
+                sentiment = article.get('sentiment')
+                
+                if article_id and sentiment:
+                    # method_name should be in sentiment dict if we updated analyzer
+                    # or retrieve from Inset class
+                    method_name = sentiment.get('method', 'inset')
+                    
+                    sentiment_results.append({
+                        "article_id": article_id,
+                        "method_name": method_name,
+                        "output": sentiment
+                    })
+            
+            if sentiment_results:
+                insert_sentiment_results(db_conn, sentiment_results)
+            
             update_pipeline_run(db_conn, run_id, stage='signal', stats={
                 'total_analyzed': signal_stats['total_analyzed']
             })
             insert_run_statistics(db_conn, run_id, 'signal', signal_stats)
         
         logger.info(f"✓ Signal stage completed: {signal_stats['total_analyzed']} articles analyzed")
-        
-        # STAGE 5: STORE IN DATABASE
+
+        # Mark run as completed
         if db_conn:
-            logger.info("\n" + "=" * 60)
-            logger.info("STAGE 5: STORE - Saving to PostgreSQL")
-            logger.info("=" * 60)
-            
-            inserted_count = insert_articles(db_conn, articles_with_sentiment, run_id)
-            logger.info(f"✓ Stored {inserted_count} articles in database")
-            
-            # Mark run as completed
             update_pipeline_run(db_conn, run_id, status='completed')
         
         # Update final metadata
@@ -207,7 +244,6 @@ def run_pipeline():
         logger.info(f"Articles fetched: {collect_stats['total_articles']}")
         logger.info(f"Articles cleaned: {clean_stats['indonesian_only']}")
         logger.info(f"Articles analyzed: {signal_stats['total_analyzed']}")
-        logger.info(f"Sentiment distribution: {signal_stats['sentiment_distribution']}")
         logger.info(f"Run directory: {run_dir}")
         logger.info("=" * 60)
         
@@ -227,4 +263,9 @@ def run_pipeline():
             db_conn.close()
 
 if __name__ == "__main__":
-    run_pipeline()
+    parser = argparse.ArgumentParser(description="Media Pipeline Daily Runner")
+    parser.add_argument("--limit", type=int, help="Limit the number of articles to process")
+    parser.add_argument("--test-mode", action="store_true", help="Run in test mode (separate data dir)")
+    args = parser.parse_args()
+    
+    run_pipeline(limit=args.limit, test_mode=args.test_mode)

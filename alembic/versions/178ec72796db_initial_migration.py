@@ -48,6 +48,40 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_sentiment_analysis_id'), 'sentiment_analysis', ['id'], unique=False)
+
+    op.create_table('pipeline_runs',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('run_id', sa.String(length=50), nullable=False),
+        sa.Column('run_date', sa.Date(), nullable=False),
+        sa.Column('started_at', sa.DateTime(), nullable=True),
+        sa.Column('completed_at', sa.DateTime(), nullable=True),
+        sa.Column('status', sa.String(length=50), nullable=True),
+        sa.Column('collect_completed', sa.Boolean(), nullable=True, default=False),
+        sa.Column('parse_completed', sa.Boolean(), nullable=True, default=False),
+        sa.Column('clean_completed', sa.Boolean(), nullable=True, default=False),
+        sa.Column('signal_completed', sa.Boolean(), nullable=True, default=False),
+        sa.Column('total_sources', sa.Integer(), nullable=True),
+        sa.Column('total_fetched', sa.Integer(), nullable=True),
+        sa.Column('total_parsed', sa.Integer(), nullable=True),
+        sa.Column('total_cleaned', sa.Integer(), nullable=True),
+        sa.Column('total_analyzed', sa.Integer(), nullable=True),
+        sa.Column('errors', sa.Text(), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('run_id')
+    )
+    op.create_index(op.f('ix_pipeline_runs_run_id'), 'pipeline_runs', ['run_id'], unique=True)
+
+    op.create_table('run_statistics',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('run_id', sa.String(length=50), nullable=False),
+        sa.Column('stage', sa.String(length=50), nullable=False),
+        sa.Column('metric_name', sa.String(length=100), nullable=False),
+        sa.Column('metric_value', sa.Float(), nullable=True),
+        sa.Column('details', sa.JSON(), nullable=True),
+        sa.ForeignKeyConstraint(['run_id'], ['pipeline_runs.run_id'], ),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_run_statistics_run_id'), 'run_statistics', ['run_id'], unique=False)
     # ### end Alembic commands ###
 
 
