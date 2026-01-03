@@ -1,5 +1,6 @@
 # Configuration files
 config/rss_sources.json
+config/db.env
 
 # Data runs 
 data/

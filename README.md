@@ -23,9 +23,28 @@ The pipeline:
 
 ## How to Run
 
-### 1. Prerequisites
-- Python 3.10+
-- PostgreSQL (optional, for storage)
+### Prerequisites
+- Python 3.8+
+- Docker and Docker Compose (for PostgreSQL)
+
+### Database Setup
+
+1. **Start PostgreSQL**:
+    ```bash
+    docker-compose up -d
+    ```
+
+2. **Run Migrations**:
+    Apply the database schema using Alembic:
+    ```bash
+    alembic upgrade head
+    ```
+
+3. **Verify Connection**:
+    You can check if the setup is correct by running:
+    ```bash
+    python tests/test_db_connection.py
+    ```
 
 ### 2. Setup Phase
 

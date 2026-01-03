@@ -15,6 +15,9 @@ nltk>=3.8.1
 
 # Database
 psycopg2-binary>=2.9.9
+SQLAlchemy>=2.0.0
+alembic>=1.13.0
+
 
 # Utilities
 python-dotenv>=1.0.0
