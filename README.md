@@ -66,7 +66,7 @@ To enable database storage:
    ```env
    DB_NAME=media_monitoring
    DB_USER=postgres
-   DB_PASSWORD=your_password
+   DB_PASSWORD=postgres
    DB_HOST=localhost
    DB_PORT=5432
    ```
