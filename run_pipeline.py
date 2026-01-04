@@ -61,20 +61,19 @@ def save_run_metadata(run_dir, metadata):
         json.dump(metadata, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved run metadata to {metadata_path}")
 
-def run_pipeline(limit=None, test_mode=False):
+def run_pipeline(limit=None):
     """Execute the complete pipeline."""
     # Generate run ID
-    run_date = datetime.now().date()
-    run_id = run_date.strftime("%Y-%m-%d")
+    now = datetime.now()
+    run_date = now.date()
+    run_id = now.strftime("%Y-%m-%d_%H-%M-%S")
     
     logger.info(f"=" * 60)
     logger.info(f"Starting pipeline run: {run_id}")
-    if test_mode:
-        logger.info("RUNNING IN TEST MODE")
     logger.info(f"=" * 60)
     
     # Create run directory
-    base_dir = Path("tests/data/runs") if test_mode else Path("data/runs")
+    base_dir = Path("data/runs")
     run_dir = base_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     
@@ -264,7 +263,6 @@ def run_pipeline(limit=None, test_mode=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Media Pipeline Daily Runner")
     parser.add_argument("--limit", type=int, help="Limit the number of articles to process")
-    parser.add_argument("--test-mode", action="store_true", help="Run in test mode (separate data dir)")
     args = parser.parse_args()
     
-    run_pipeline(limit=args.limit, test_mode=args.test_mode)
+    run_pipeline(limit=args.limit)
