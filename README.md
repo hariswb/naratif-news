@@ -64,7 +64,7 @@ The project uses `config/rss_sources.json` for source definitions.
 To enable database storage:
 1. Create `config/db.env` with the following content:
    ```env
-   DB_NAME=media_monitoring
+   DB_NAME=media_pipeline
    DB_USER=postgres
    DB_PASSWORD=postgres
    DB_HOST=localhost

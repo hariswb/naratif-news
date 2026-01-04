@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, JSON, BOOLEAN, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, JSON, Boolean, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -36,3 +36,44 @@ class SentimentAnalysis(Base):
     
     # Relationships
     article = relationship("Article", back_populates="sentiment_analyses")
+
+class PipelineRun(Base):
+    __tablename__ = "pipeline_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(String(50), unique=True, index=True, nullable=False)
+    run_date = Column(Date, nullable=False)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    status = Column(String(50))
+    
+    # Stage completion flags
+    collect_completed = Column(Boolean, default=False)
+    parse_completed = Column(Boolean, default=False)
+    clean_completed = Column(Boolean, default=False)
+    signal_completed = Column(Boolean, default=False)
+    
+    # Statistics
+    total_sources = Column(Integer)
+    total_fetched = Column(Integer)
+    total_parsed = Column(Integer)
+    total_cleaned = Column(Integer)
+    total_analyzed = Column(Integer)
+    
+    errors = Column(Text)
+    
+    # Relationships
+    statistics = relationship("RunStatistic", back_populates="run", cascade="all, delete-orphan")
+
+class RunStatistic(Base):
+    __tablename__ = "run_statistics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(String(50), ForeignKey("pipeline_runs.run_id"), index=True, nullable=False)
+    stage = Column(String(50), nullable=False)
+    metric_name = Column(String(100), nullable=False)
+    metric_value = Column(Float)
+    details = Column(JSON)
+    
+    # Relationships
+    run = relationship("PipelineRun", back_populates="statistics")
