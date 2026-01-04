@@ -25,7 +25,7 @@ from pipeline.parse.rss_to_jsonl import parse_to_jsonl, load_jsonl
 from pipeline.clean.normalize import clean_articles
 from pipeline.signal.sentiment import analyze_all_sentiments, Inset
 from pipeline.db import (
-    get_db_connection, create_pipeline_run, update_pipeline_run, 
+    get_db_session, create_pipeline_run, update_pipeline_run, 
     insert_articles, insert_run_statistics, insert_sentiment_results
 )
 
@@ -92,16 +92,15 @@ def run_pipeline(limit=None, test_mode=False):
     save_run_metadata(run_dir, metadata)
     
     # Connect to database
+    db_session = None
     try:
-        db_conn = get_db_connection()
-        db_conn.connect()
-        # In test mode, we might want to ensure we are connected to the test DB?
-        # The env vars should be set by the caller (docker-compose or shell)
-        create_pipeline_run(db_conn, run_id, run_date)
+        db_session = get_db_session()
+        # Create pipeline run using ORM
+        create_pipeline_run(db_session, run_id, run_date)
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
         logger.warning("Continuing without database storage...")
-        db_conn = None
+        db_session = None
     
     try:
         # STAGE 1: COLLECT
@@ -123,12 +122,12 @@ def run_pipeline(limit=None, test_mode=False):
         }
         save_run_metadata(run_dir, metadata)
         
-        if db_conn:
-            update_pipeline_run(db_conn, run_id, stage='collect', stats={
+        if db_session:
+            update_pipeline_run(db_session, run_id, stage='collect', stats={
                 'total_sources': collect_stats['total_sources'],
                 'total_fetched': collect_stats['total_articles']
             })
-            insert_run_statistics(db_conn, run_id, 'collect', collect_stats)
+            insert_run_statistics(db_session, run_id, 'collect', collect_stats)
         
         logger.info(f"✓ Collect stage completed: {collect_stats['total_articles']} articles")
         
@@ -145,11 +144,11 @@ def run_pipeline(limit=None, test_mode=False):
         }
         save_run_metadata(run_dir, metadata)
         
-        if db_conn:
-            update_pipeline_run(db_conn, run_id, stage='parse', stats={
+        if db_session:
+            update_pipeline_run(db_session, run_id, stage='parse', stats={
                 'total_parsed': parse_stats['total_articles']
             })
-            insert_run_statistics(db_conn, run_id, 'parse', parse_stats)
+            insert_run_statistics(db_session, run_id, 'parse', parse_stats)
         
         logger.info(f"✓ Parse stage completed: {parse_stats['total_articles']} articles")
         
@@ -167,21 +166,21 @@ def run_pipeline(limit=None, test_mode=False):
         }
         save_run_metadata(run_dir, metadata)
         
-        if db_conn:
-            update_pipeline_run(db_conn, run_id, stage='clean', stats={
+        if db_session:
+            update_pipeline_run(db_session, run_id, stage='clean', stats={
                 'total_cleaned': clean_stats['indonesian_only']
             })
-            insert_run_statistics(db_conn, run_id, 'clean', clean_stats)
+            insert_run_statistics(db_session, run_id, 'clean', clean_stats)
         
         logger.info(f"✓ Clean stage completed: {clean_stats['indonesian_only']} articles")
         
         # STAGE 4: STORE ARTICLES (New Flow)
         url_to_id = {}
-        if db_conn:
+        if db_session:
             logger.info("\n" + "=" * 60)
             logger.info("STAGE 4: STORE ARTICLES")
             logger.info("=" * 60)
-            url_to_id = insert_articles(db_conn, cleaned_articles, run_id, run_date)
+            url_to_id = insert_articles(db_session, cleaned_articles, run_id, run_date)
             logger.info(f"✓ Stored {len(url_to_id)} articles in database")
         
         # STAGE 5: SIGNAL (Sentiment Analysis)
@@ -197,7 +196,7 @@ def run_pipeline(limit=None, test_mode=False):
         }
         save_run_metadata(run_dir, metadata)
         
-        if db_conn:
+        if db_session:
             # Prepare sentiment results for storage
             sentiment_results = []
             for article in articles_with_sentiment:
@@ -217,18 +216,18 @@ def run_pipeline(limit=None, test_mode=False):
                     })
             
             if sentiment_results:
-                insert_sentiment_results(db_conn, sentiment_results)
+                insert_sentiment_results(db_session, sentiment_results)
             
-            update_pipeline_run(db_conn, run_id, stage='signal', stats={
+            update_pipeline_run(db_session, run_id, stage='signal', stats={
                 'total_analyzed': signal_stats['total_analyzed']
             })
-            insert_run_statistics(db_conn, run_id, 'signal', signal_stats)
+            insert_run_statistics(db_session, run_id, 'signal', signal_stats)
         
         logger.info(f"✓ Signal stage completed: {signal_stats['total_analyzed']} articles analyzed")
 
         # Mark run as completed
-        if db_conn:
-            update_pipeline_run(db_conn, run_id, status='completed')
+        if db_session:
+            update_pipeline_run(db_session, run_id, status='completed')
         
         # Update final metadata
         metadata['completed_at'] = datetime.now().isoformat()
@@ -253,14 +252,14 @@ def run_pipeline(limit=None, test_mode=False):
         metadata['error'] = str(e)
         save_run_metadata(run_dir, metadata)
         
-        if db_conn:
-            update_pipeline_run(db_conn, run_id, status='failed', errors=str(e))
+        if db_session:
+            update_pipeline_run(db_session, run_id, status='failed', errors=str(e))
         
         raise
     
     finally:
-        if db_conn:
-            db_conn.close()
+        if db_session:
+            db_session.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Media Pipeline Daily Runner")
