@@ -12,13 +12,6 @@ The pipeline:
 * [Unimplemented] Aggregates signals into patterns
 * [Unimplemented] Produces **ready-to-read narrative outputs**
 
-## Core Design Principles
-
-1. **Batch-first**: One run represents one snapshot of the media landscape.
-2. **Artifacts over processes**: Each stage produces concrete outputs (files/DB records).
-3. **Immutability**: Raw and intermediate artifacts are never mutated.
-4. **Narrative over metrics**: Numbers exist to support interpretation.
-
 ---
 
 ## How to Run
@@ -106,39 +99,49 @@ media-pipeline/
 └── requirements.txt
 ```
 
-## Implementation Details
 
-### Run Daily (Orchestrator)
+## Architecture
+
+### Core Design Principles
+
+1. **Batch-first**: One run represents one snapshot of the media landscape.
+2. **Artifacts over processes**: Each stage produces concrete outputs (files/DB records).
+3. **Immutability**: Raw and intermediate artifacts are never mutated.
+4. **Narrative over metrics**: Numbers exist to support interpretation.
+
+### Implementation Details
+
+#### Run Daily (Orchestrator)
 The `run_daily.py` script manages the sequential execution of the pipeline:
 - **Run Management**: Generates a daily `run_id` and creates the directory structure (`data/runs/YYYY-MM-DD/`).
 - **Metadata**: Tracks stage status and statistics in `run_meta.json`.
 - **Database**: Updates `pipeline_runs` with progress and stats.
 - **Logging**: Maintains run-specific logs.
 
-### Collect
+#### Collect
 Located in `pipeline/collect/fetch_rss.py`.
 - **Function**: Iterates through sources in `config/rss_sources.json`.
 - **Artifacts**: Saves raw XML responses to `data/runs/{run_id}/raw/rss/`.
 - **Processing**: extracts title, link, summary, and publish date; handles timeouts.
 
-### Parse
+#### Parse
 Located in `pipeline/parse/rss_to_jsonl.py`.
 - **Function**: Standardizes raw articles into a common format.
 - **Artifacts**: Writes to `data/runs/{run_id}/parsed/raw_articles.jsonl`.
 - **Format**: JSON Lines (JSONL) with ISO-formatted dates.
 
-### Clean
+#### Clean
 Located in `pipeline/clean/normalize.py`.
 - **Text Normalization**: Strips HTML tags and normalizes whitespace.
 - **Deduplication**: Uses MD5 hash of `title|summary` to remove exact duplicates.
 - **Language Filter**: Uses `langdetect` to keep only Indonesian (`id`) articles.
 
-### Sentiment Analysis
+#### Sentiment Analysis
 Uses a local dictionary-based approach specialized for Indonesian language (Sastrawi + Custom Dictionary).
 - **Positive/Negative Words**: Stored in `pipeline/signal/data/`
 - **Logic**: Counts weighted matches and normalizes score (-1, 0, 1).
 
-### Topic Modelling
+#### Topic Modelling
 Uses Latent Dirichlet Allocation (LDA) to discover abstract topics within the collected news articles.
 - **Library**: `scikit-learn` (TfidfVectorizer, LatentDirichletAllocation)
 - **Preprocessing**: 
