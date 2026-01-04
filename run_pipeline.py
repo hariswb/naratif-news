@@ -255,6 +255,38 @@ def run_pipeline(limit=None):
             else:
                 logger.info("No topic modelling results to store")
 
+
+        # STAGE 7: NER
+        if db_session:
+            logger.info("\n" + "=" * 60)
+            logger.info("STAGE 7: NER - Named Entity Recognition")
+            logger.info("=" * 60)
+            
+            from pipeline.signal.ner import analyze_all_ner
+            from pipeline.db import insert_ner_results
+            
+            # NER analysis
+            articles_with_ner = analyze_all_ner(cleaned_articles)
+            
+            # Prepare and store results
+            ner_results = []
+            for article in articles_with_ner:
+                url = article.get('url')
+                db_id = url_to_id.get(url)
+                ner_data = article.get('ner')
+                
+                if db_id and ner_data:
+                    ner_results.append({
+                        "article_id": db_id,
+                        "method_name": ner_data.get('method', 'unknown'),
+                        "output": ner_data.get('entities', [])
+                    })
+            
+            if ner_results:
+                insert_ner_results(db_session, ner_results)
+                logger.info(f"✓ NER completed: {len(ner_results)} articles processed")
+
+
         # Mark run as completed
         if db_session:
             update_pipeline_run(db_session, run_id, status='completed')

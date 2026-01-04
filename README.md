@@ -153,3 +153,15 @@ Uses Latent Dirichlet Allocation (LDA) to discover abstract topics within the co
   - *Topic 1*: pembangunan, anggaran, pajak, sisa, kerja, lebaran, piala, timnas, asia, indonesia
   - *Topic 2*: prabowo, megawati, jadwal, pertemuan, indonesia, partai, kereta, api, merah, presiden
   - *Topic 3*: trump, tarif, amerika, serikat, indonesia, impor, prabowo, republik, china, undang
+
+#### Named Entity Recognition (NER)
+Uses `cahya/bert-base-indonesian-NER` (NusaBert) to extract entities from news titles and summaries.
+- **Library**: `transformers` (Hugging Face)
+- **Entities**: 
+  - `PER`: Person
+  - `ORG`: Organization
+  - `LOC`: Location (City, Country, Region)
+  - `EVT`: Event
+  - `etc`.
+- **Output**: Stores a list of detected entities with confidence scores.
+

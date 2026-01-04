@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from pipeline.storage.models import Article, SentimentAnalysis, PipelineRun, RunStatistic, TopicModelling
+from pipeline.storage.models import Article, SentimentAnalysis, PipelineRun, RunStatistic, TopicModelling, NamedEntityRecognition
 from pipeline.storage.database import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -207,4 +207,30 @@ def insert_topic_models(session: Session, topic_results):
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert topic models: {e}")
+        raise
+def insert_ner_results(session: Session, ner_results):
+    """
+    Insert NER results.
+    ner_results: List of dicts with keys (article_id, method_name, output)
+    """
+    if not ner_results:
+        return
+        
+    try:
+        # Prepare data for bulk insert
+        mappings = []
+        for result in ner_results:
+            mappings.append({
+                "article_id": result['article_id'],
+                "method_name": result['method_name'],
+                "output": result['output']
+            })
+            
+        session.bulk_insert_mappings(NamedEntityRecognition, mappings)
+        session.commit()
+        logger.info(f"Inserted NER results for {len(ner_results)} articles")
+        
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to insert NER results: {e}")
         raise

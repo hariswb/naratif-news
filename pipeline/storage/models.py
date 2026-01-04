@@ -22,6 +22,8 @@ class Article(Base):
     # Relationships
     sentiment_analyses = relationship("SentimentAnalysis", back_populates="article", cascade="all, delete-orphan")
     topic_modelling = relationship("TopicModelling", back_populates="article", cascade="all, delete-orphan")
+    ner_results = relationship("NamedEntityRecognition", back_populates="article", cascade="all, delete-orphan")
+
 
 class SentimentAnalysis(Base):
     __tablename__ = "sentiment_analysis"
@@ -93,3 +95,19 @@ class TopicModelling(Base):
     
     # Relationships
     article = relationship("Article", back_populates="topic_modelling")
+
+class NamedEntityRecognition(Base):
+    __tablename__ = "named_entity_recognition"
+
+    id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
+    method_name = Column(String(50), nullable=False)
+    
+    # Output stored as JSON: list of entities
+    output = Column(JSON, nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    article = relationship("Article", back_populates="ner_results")
+
