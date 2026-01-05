@@ -108,7 +108,17 @@ class TopicModeller:
         articles_df['clean_text'] = articles_df['title'].apply(self.preprocess_text)
         
         # TF-IDF Vectorization
-        self.vectorizer = TfidfVectorizer(stop_words=self.stopwords, max_features=self.max_features)
+        # Preprocess stopwords to avoid sklearn warning
+        # The default tokenizer splits on punctuation, so 'berkali-kali' becomes 'berkali', 'kali'.
+        # We need to ensure these tokens are in the stop_words list.
+        processed_stopwords = set(self.stopwords)
+        tokenizer = TfidfVectorizer().build_tokenizer()
+        for sw in self.stopwords:
+            tokens = tokenizer(sw)
+            if len(tokens) > 1:
+                processed_stopwords.update(tokens)
+        
+        self.vectorizer = TfidfVectorizer(stop_words=list(processed_stopwords), max_features=self.max_features)
         try:
             X = self.vectorizer.fit_transform(articles_df['clean_text'])
         except ValueError as e:
