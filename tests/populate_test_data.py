@@ -43,6 +43,12 @@ def configure_logging(log_file: Path):
 def populate_data():
     # Data dir is relative to this script: ./data
     base_dir = Path(__file__).parent / "data"
+    
+    # Check if data already exists
+    if base_dir.exists() and any(base_dir.iterdir()):
+        print(f"Test data already exists in {base_dir}. Skipping population.")
+        return
+
     setup_test_data_dir(base_dir)
     
     configure_logging(base_dir / "logs" / "pipeline.log")
