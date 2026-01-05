@@ -32,8 +32,10 @@ class SentimentAnalysis(Base):
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
     method_name = Column(String(50), nullable=False)
     
-    # Output stored as JSONB for flexibility (e.g. {polarity: 0.1, label: 'positive', subjectivity: 0.2})
-    output = Column(JSON, nullable=False)
+    # Structured output
+    polarity = Column(Float, nullable=False)
+    label = Column(String(20), nullable=False)
+    score = Column(Float, nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -88,8 +90,9 @@ class TopicModelling(Base):
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
     method_name = Column(String(50), nullable=False)
     
-    # Output stored as JSON for flexibility (e.g. {topic_index: 1, keywords: "news, market"})
-    output = Column(JSON, nullable=False)
+    # Structured output
+    topic_index = Column(Integer, nullable=False)
+    keywords = Column(Text, nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -103,8 +106,12 @@ class NamedEntityRecognition(Base):
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
     method_name = Column(String(50), nullable=False)
     
-    # Output stored as JSON: list of entities
-    output = Column(JSON, nullable=False)
+    # Structured output - One row per entity
+    entity_group = Column(String(50), nullable=False)
+    word = Column(String(255), nullable=False)
+    score = Column(Float, nullable=False)
+    start_char = Column(Integer)
+    end_char = Column(Integer)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

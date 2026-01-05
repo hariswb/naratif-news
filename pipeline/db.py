@@ -61,29 +61,34 @@ def insert_articles(session: Session, articles, run_id, run_date):
 def insert_sentiment_results(session: Session, sentiment_results):
     """
     Insert sentiment analysis results using ORM.
-    sentiment_results: list of dicts {article_id, method_name, output}
+    sentiment_results: list of dicts {article_id, method_name, output: {polarity, label, raw_score}}
     """
     if not sentiment_results:
         return
 
     try:
         # Using bulk_insert_mappings is efficient for simple inserts
-        mappings = [
-            {
+        mappings = []
+        for res in sentiment_results:
+            output = res['output']
+            mappings.append({
                 "article_id": res['article_id'],
                 "method_name": res['method_name'],
-                "output": res['output']  # SQLAlchemy JSON type handles serialization automatically usually, but let's check
-                # Note: If defining output as JSON type in model, we can pass dict directly. 
-                # If defined as Text/String, we need json.dumps. 
-                # Model says: output = Column(JSON, nullable=False)
-            }
-            for res in sentiment_results
-        ]
+                "polarity": output.get('polarity', 0.0),
+                "label": output.get('label', 'neutral'),
+                "score": output.get('raw_score', 0.0)
+            })
         
         session.bulk_insert_mappings(SentimentAnalysis, mappings)
         session.commit()
         logger.info(f"Inserted {len(mappings)} sentiment results")
         
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to insert sentiment results: {e}")
+        raise
+
+# ... (previous content)
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert sentiment results: {e}")
@@ -193,11 +198,8 @@ def insert_topic_models(session: Session, topic_results):
             mappings.append({
                 "article_id": result['article_id'],
                 "method_name": result['method_name'],
-                # Pack topic_index and keywords into output JSON
-                "output": {
-                    "topic_index": result['topic_index'],
-                    "keywords": result['keywords']
-                }
+                "topic_index": result['topic_index'],
+                "keywords": result['keywords']
             })
             
         session.bulk_insert_mappings(TopicModelling, mappings)
@@ -208,27 +210,38 @@ def insert_topic_models(session: Session, topic_results):
         session.rollback()
         logger.error(f"Failed to insert topic models: {e}")
         raise
+
 def insert_ner_results(session: Session, ner_results):
     """
     Insert NER results.
-    ner_results: List of dicts with keys (article_id, method_name, output)
+    ner_results: List of dicts with keys (article_id, method_name, output: [entities])
     """
     if not ner_results:
         return
         
     try:
-        # Prepare data for bulk insert
+        # Prepare data for bulk insert - flatten entities
         mappings = []
         for result in ner_results:
-            mappings.append({
-                "article_id": result['article_id'],
-                "method_name": result['method_name'],
-                "output": result['output']
-            })
+            article_id = result['article_id']
+            method_name = result['method_name']
+            entities = result.get('output', [])
             
-        session.bulk_insert_mappings(NamedEntityRecognition, mappings)
-        session.commit()
-        logger.info(f"Inserted NER results for {len(ner_results)} articles")
+            for entity in entities:
+                mappings.append({
+                    "article_id": article_id,
+                    "method_name": method_name,
+                    "entity_group": entity.get('entity_group', 'UNKNOWN'),
+                    "word": entity.get('word', ''),
+                    "score": entity.get('score', 0.0),
+                    "start_char": entity.get('start', 0),
+                    "end_char": entity.get('end', 0)
+                })
+            
+        if mappings:
+            session.bulk_insert_mappings(NamedEntityRecognition, mappings)
+            session.commit()
+            logger.info(f"Inserted {len(mappings)} NER entities")
         
     except Exception as e:
         session.rollback()
