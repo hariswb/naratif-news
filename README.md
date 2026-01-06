@@ -158,10 +158,26 @@ Uses Latent Dirichlet Allocation (LDA) to discover abstract topics within the co
 Uses `cahya/bert-base-indonesian-NER` (NusaBert) to extract entities from news titles and summaries.
 - **Library**: `transformers` (Hugging Face)
 - **Entities**: 
-  - `PER`: Person
-  - `ORG`: Organization
-  - `LOC`: Location (City, Country, Region)
-  - `EVT`: Event
-  - `etc`.
+  ```
+    'CRD': Cardinal
+    'DAT': Date
+    'EVT': Event
+    'FAC': Facility
+    'GPE': Geopolitical Entity
+    'LAW': Law Entity (such as Undang-Undang)
+    'LOC': Location
+    'MON': Money
+    'NOR': Political Organization
+    'ORD': Ordinal
+    'ORG': Organization
+    'PER': Person
+    'PRC': Percent
+    'PRD': Product
+    'QTY': Quantity
+    'REG': Religion
+    'TIM': Time
+    'WOA': Work of Art
+    'LAN': Language
+  ```
 - **Output**: Stores a list of detected entities with confidence scores.
 
