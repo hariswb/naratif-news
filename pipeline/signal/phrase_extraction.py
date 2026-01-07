@@ -93,12 +93,37 @@ class PhraseExtractor:
 
         return results
 
+    def _filter_subphrases(self, phrases):
+        """
+        Filter out phrases that are substrings of longer phrases in the same list.
+        Example: ["makan siang", "makan siang gratis"] -> ["makan siang gratis"]
+        """
+        if not phrases:
+            return []
+            
+        # Sort by length (desc) so longest phrases come first
+        sorted_phrases = sorted(list(set(phrases)), key=len, reverse=True)
+        kept_phrases = []
+        
+        for phrase in sorted_phrases:
+            # If phrase is part of any already kept phrase, skip it
+            is_substring = False
+            for kept in kept_phrases:
+                if phrase in kept:
+                    is_substring = True
+                    break
+            
+            if not is_substring:
+                kept_phrases.append(phrase)
+                
+        return kept_phrases
+
     def extract_from_article(self, article_text, entity_word):
         """
         Extract framing phrases for an entity from a single article text.
         Returns list of phrases.
         """
-        phrases = []
+        candidates = []
         text = self.clean_text(article_text)
         
         # Determine context windows for this specific entity
@@ -106,11 +131,13 @@ class PhraseExtractor:
         
         for window in windows:
             # Generate 2-gram, 3-gram, 4-gram
+            # We collect ALL candidates first, then filter
+            window_phrases = []
             for n in range(2, 5):
                 grams = ngrams(window, n)
                 
                 for gram in grams:
-                    # Filter
+                    # Filter stopwords
                     if all(word in self.stopwords for word in gram):
                         continue
                     if gram[0] in self.stopwords or gram[-1] in self.stopwords:
@@ -119,9 +146,12 @@ class PhraseExtractor:
                         continue
 
                     phrase = " ".join(gram)
-                    phrases.append(phrase)
+                    window_phrases.append(phrase)
+            
+            # Filter substrings per window to avoid "makan siang" AND "makan siang gratis" from same sentence
+            candidates.extend(self._filter_subphrases(window_phrases))
                     
-        return phrases
+        return candidates
 
     def extract_phrases(self, entity_word, articles):
         """
