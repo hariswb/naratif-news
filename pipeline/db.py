@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from pipeline.storage.models import Article, SentimentAnalysis, PipelineRun, RunStatistic, TopicModelling, NamedEntityRecognition
+from pipeline.storage.models import Article, SentimentAnalysis, PipelineRun, RunStatistic, TopicModelling, NamedEntityRecognition, EntityFraming
 from pipeline.storage.database import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -246,4 +246,33 @@ def insert_ner_results(session: Session, ner_results):
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert NER results: {e}")
+        raise
+
+def insert_framing_results(session: Session, framing_results):
+    """
+    Insert Entity Framing results.
+    framing_results: List of dicts with keys (article_id, entity_word, framing_phrase, method_name)
+    """
+    if not framing_results:
+        return
+        
+    try:
+        # Prepare data for bulk insert
+        mappings = []
+        for result in framing_results:
+            mappings.append({
+                "article_id": result['article_id'],
+                "entity_word": result['entity_word'],
+                "framing_phrase": result['framing_phrase'],
+                "method_name": result.get('method_name', 'ngram_window')
+            })
+            
+        if mappings:
+            session.bulk_insert_mappings(EntityFraming, mappings)
+            session.commit()
+            logger.info(f"Inserted {len(mappings)} framing phrases")
+        
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to insert framing results: {e}")
         raise

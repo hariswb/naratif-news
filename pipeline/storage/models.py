@@ -23,6 +23,7 @@ class Article(Base):
     sentiment_analyses = relationship("SentimentAnalysis", back_populates="article", cascade="all, delete-orphan")
     topic_modelling = relationship("TopicModelling", back_populates="article", cascade="all, delete-orphan")
     ner_results = relationship("NamedEntityRecognition", back_populates="article", cascade="all, delete-orphan")
+    framing_results = relationship("EntityFraming", back_populates="article", cascade="all, delete-orphan")
 
 
 class SentimentAnalysis(Base):
@@ -117,4 +118,22 @@ class NamedEntityRecognition(Base):
     
     # Relationships
     article = relationship("Article", back_populates="ner_results")
+
+class EntityFraming(Base):
+    __tablename__ = "entity_framing"
+
+    id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
+    
+    # Context
+    entity_word = Column(String(255), nullable=False, index=True)
+    framing_phrase = Column(String(255), nullable=False)
+    
+    # Metadata
+    method_name = Column(String(50), nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    article = relationship("Article", back_populates="framing_results")
 

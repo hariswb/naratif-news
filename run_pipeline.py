@@ -287,6 +287,71 @@ def run_pipeline(limit=None):
                 logger.info(f"✓ NER completed: {len(ner_results)} articles processed")
 
 
+        # STAGE 8: ENTITY FRAMING
+        if db_session:
+            logger.info("\n" + "=" * 60)
+            logger.info("STAGE 8: ENTITY FRAMING")
+            logger.info("=" * 60)
+            
+            from pipeline.signal.phrase_extraction import PhraseExtractor
+            from pipeline.db import insert_framing_results
+            
+            # Initialize extractor
+            phrase_extractor = PhraseExtractor()
+            framing_db_rows = []
+            
+            # We need to process articles that have NER results
+            # Logic: For each article, get extracted entities, then extract phrasing for those entities
+            
+            count_framed = 0
+            
+            for article in articles_with_ner:
+                url = article.get('url')
+                db_id = url_to_id.get(url)
+                
+                if not db_id:
+                    continue
+                    
+                ner_data = article.get('ner', {})
+                entities = ner_data.get('entities', [])
+                
+                # Filter for valuable entities
+                VALUABLE_ENTITY_GROUPS = {'ORG', 'GPE', 'PER', 'PRD', 'NOR', 'EVT', 'LAW', 'MON', 'REG'}
+                
+                # Get unique entity words validation
+                unique_entities = set()
+                for e in entities:
+                    if e.get('entity_group') in VALUABLE_ENTITY_GROUPS:
+                        unique_entities.add(e['word'])
+                
+                if not unique_entities:
+                    continue
+                    
+                article_text = f"{article.get('title', '')}. {article.get('summary', '')}"
+                
+                has_framing = False
+                for entity_word in unique_entities:
+                    phrases = phrase_extractor.extract_from_article(article_text, entity_word)
+                    
+                    for phrase in phrases:
+                        framing_db_rows.append({
+                            "article_id": db_id,
+                            "entity_word": entity_word,
+                            "framing_phrase": phrase,
+                            "method_name": "ngram_window"
+                        })
+                        has_framing = True
+                        
+                if has_framing:
+                    count_framed += 1
+            
+            if framing_db_rows:
+                insert_framing_results(db_session, framing_db_rows)
+                logger.info(f"✓ Entity Framing completed: {len(framing_db_rows)} phrases extracted from {count_framed} articles")
+            else:
+                logger.info("No framing phrases extracted")
+
+
         # Mark run as completed
         if db_session:
             update_pipeline_run(db_session, run_id, status='completed')
