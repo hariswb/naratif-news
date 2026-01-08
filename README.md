@@ -1,8 +1,8 @@
-# Media Monitoring Pipeline — Daily Batch Architecture
+# Media Monitoring Pipeline — Batch Architecture
 
 ## Overview
 
-This project implements a **daily, batch-oriented media monitoring pipeline** focused on **narrative intelligence** for Indonesian news.
+This project implements a **batch-oriented media monitoring pipeline** focused on **narrative intelligence** for Indonesian news.
 
 The pipeline:
 
@@ -68,8 +68,8 @@ To enable database storage:
 ### 4. Execute Pipeline
 
 ```bash
-# Run the daily pipeline
-python3 run_daily.py
+# Run the pipeline
+python3 run_pipeline.py
 ```
 
 This will:
@@ -85,7 +85,7 @@ This will:
 
 ```
 media-pipeline/
-├── run_daily.py          # Orchestrator
+├── run_pipeline.py          # Orchestrator
 ├── config/               # Configuration files
 ├── data/                 # Data artifacts (runs, logs)
 ├── pipeline/
@@ -111,9 +111,9 @@ media-pipeline/
 
 ### Implementation Details
 
-#### Run Daily (Orchestrator)
-The `run_daily.py` script manages the sequential execution of the pipeline:
-- **Run Management**: Generates a daily `run_id` and creates the directory structure (`data/runs/YYYY-MM-DD/`).
+#### Run Pipeline (Orchestrator)
+The `run_pipeline.py` script manages the sequential execution of the pipeline:
+- **Run Management**: Generates a `run_id` and creates the directory structure (`data/runs/YYYY-MM-DD/`).
 - **Metadata**: Tracks stage status and statistics in `run_meta.json`.
 - **Database**: Updates `pipeline_runs` with progress and stats.
 - **Logging**: Maintains run-specific logs.
@@ -180,4 +180,10 @@ Uses `cahya/bert-base-indonesian-NER` (NusaBert) to extract entities from news t
     'LAN': Language
   ```
 - **Output**: Stores a list of detected entities with confidence scores.
+
+#### Entity Framing
+Uses n-gram windowing to extract phrases surrounding key entities (ORG, GPE, PER, etc.).
+- **Logic**: Extracts a window of words around detected entities to capture how they are "framed" in the text.
+- **Output**: Pairs of `entity_word` and `framing_phrase`.
+
 
