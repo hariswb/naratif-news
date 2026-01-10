@@ -20,61 +20,56 @@ class TestPhraseExtraction(unittest.TestCase):
         self.extractor = PhraseExtractor()
         
     def test_basic_logic(self):
-        """Test basic windowing and n-gram extraction logic."""
-        articles = [{
-            "title": "Uji Coba Program Makan Siang Gratis",
-            "summary": "Pemerintah sedang melakukan uji coba program makan siang gratis untuk anak sekolah."
-        }]
-        entity = "makan" # Entity inside the phrase
-        
-        # "program makan siang gratis" -> framing for "makan"? 
-        # Actually usually entity is "Prabowo", framing "makan siang gratis".
-        # Let's try entity "Program"
+        """Test basic windowing and phrase extraction logic."""
+        articles = [
+            {
+                "title": "Uji Coba Program Makan Siang Gratis",
+                "summary": "Pemerintah sedang melakukan uji coba program makan siang gratis untuk anak sekolah."
+            },
+            {
+                "title": "Uji Coba Lagi",
+                "summary": "Pemerintah sedang melakukan uji coba program makan siang gratis untuk anak sekolah."
+            }
+        ]
+        # Entity "program"
+        # Remaining: "makan siang gratis untuk anak sekolah"
+        # Trim stopwords: "makan siang gratis untuk anak sekolah" (if "untuk" is not stopword, or similar)
         
         results = self.extractor.extract_phrases("program", articles)
-        # Expected: "makan siang", "siang gratis", "uji coba" (if window reaches)
-        
         phrases = [r['phrase'] for r in results]
         logger.info(f"Basic logic extracted: {phrases}")
         
-        # "makan siang" should be there
-        # With deduplication, if "program makan siang gratis" is the text:
-        # "makan siang" (2-gram) is substring of "makan siang gratis" (3-gram).
-        # But "makan" is entity, so 3-gram "makan siang gratis" contains "makan"? 
-        # Wait, if entity is "Program", text "Program makan siang gratis".
-        # Window: "makan", "siang", "gratis" (removed Program).
-        # Phrases: "makan siang", "siang gratis", "makan siang gratis"
-        # Deduplicated: "makan siang gratis" ONLY.
-        
-        # Let's check what we expect. 
-        # If "makan siang" is common phrase, we might want it. But usually longest context is best.
-        # We expect "makan siang gratis" or similar longest
-        
-        # Use simpler check that we don't return substrings
-        # phrases = [r['phrase'] for r in results]
-        # self.assertIn("makan siang gratis", phrases) OR similar
-        pass 
+        self.assertTrue(len(phrases) > 0)
+        # The phrase should contain "makan siang gratis"
+        self.assertTrue(any("makan siang gratis" in p for p in phrases))
 
     def test_deduplication(self):
-        """Test that shorter substrings are removed."""
-        # Repeat the sentence to ensure count > 1 (threshold)
-        articles = [{
-            "title": "Test", 
-            "summary": "Saya suka makan siang gratis. Saya suka makan siang gratis."
-        }]
-        # Entity "Saya", text "suka makan siang gratis"
+        """Test that shorter substrings are removed across articles."""
+        articles = [
+            {
+                "title": "A", 
+                "summary": "Saya suka makan siang gratis."
+            },
+            {
+                "title": "B",
+                "summary": "Saya suka makan siang gratis."
+            }
+        ]
+        # Entity "Saya"
+        # Segment: "suka makan siang gratis"
         results = self.extractor.extract_phrases("Saya", articles)
         phrases = [r['phrase'] for r in results]
         
-        # "makan siang" is inside "makan siang gratis"
-        # "siang gratis" is inside "makan siang gratis"
-        # "suka makan"
-        
-        
-        # Expect "suka makan siang gratis" (4-gram) to subsume "makan siang gratis" and "makan siang"
+        # New logic extracts maximal segments. 
+        # "suka makan siang gratis" is extracted.
+        # Fragments like "makan siang" are NOT extracted by the new logic at all.
         self.assertIn("suka makan siang gratis", phrases)
-        self.assertNotIn("makan siang gratis", phrases)
-        self.assertNotIn("makan siang", phrases)
+        
+        # Verify no tiny fragments are left if they are substrings
+        for p in phrases:
+            for other in phrases:
+                if p != other:
+                    self.assertNotIn(p, other)
 
     def test_real_data(self):
         """Test using the provided test artifacts."""

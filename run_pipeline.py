@@ -294,7 +294,7 @@ def run_pipeline(limit=None):
             logger.info("=" * 60)
             
             from pipeline.signal.phrase_extraction import PhraseExtractor
-            from pipeline.db import insert_framing_results
+            from pipeline.db import insert_framing_results, delete_framing_for_articles
             
             # Initialize extractor
             phrase_extractor = PhraseExtractor()
@@ -302,6 +302,24 @@ def run_pipeline(limit=None):
             
             # We need to process articles that have NER results
             # Logic: For each article, get extracted entities, then extract phrasing for those entities
+            
+            # IDEMPOTENCY: Clear old framing results for these articles first
+            # We process ALL articles that have NER, so we clean ALL of them?
+            # Or better: clean as we find matches. But bulk delete is better.
+            
+            # Identify target articles
+            target_ids = []
+            for article in articles_with_ner:
+                url = article.get('url')
+                db_id = url_to_id.get(url)
+                if db_id:
+                    target_ids.append(db_id)
+                    
+            if target_ids:
+                delete_framing_for_articles(db_session, target_ids)
+                logger.info(f"Cleared existing framing for {len(target_ids)} articles to prevent duplication")
+            
+            count_framed = 0
             
             count_framed = 0
             

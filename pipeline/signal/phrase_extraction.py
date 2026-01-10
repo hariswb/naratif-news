@@ -66,32 +66,30 @@ class PhraseExtractor:
         windows = []
         sentences = sent_tokenize(text)
         
-        entity_lower = entity_word.lower()
+        # Prepare entity tokens for matching
+        entity_tokens = word_tokenize(re.sub(r'[^\w\s]', '', entity_word.lower()))
+        if not entity_tokens:
+            return []
         
         for sentence in sentences:
-            if entity_lower in sentence.lower():
+            if entity_word.lower() in sentence.lower():
                 # Tokenize sentence
                 # Remove punctuation for the window analysis to yield clean phrases
                 clean_sentence = re.sub(r'[^\w\s]', '', sentence)
                 tokens = word_tokenize(clean_sentence.lower())
                 
-                # Find entity indices
-                indices = [i for i, x in enumerate(tokens) if x == entity_lower]
-                
-                for idx in indices:
-                    start = max(0, idx - self.window_size)
-                    end = min(len(tokens), idx + self.window_size + 1)
-                    
-                    window_tokens = tokens[start:end]
-                    # Remove the entity itself from the phrase? The plan says "co-occur with entity".
-                    # Usually framing includes the entity in the syntax but the phrases we want are "program makan siang" (without Prabowo).
-                    # The example: "program makan siang" (from "program makan siang gratis nasional")
-                    # Let's keep the window as is for n-gram generation.
-                    windows.append(window_tokens)
-                    
+                # Find occurrences of the entity token sequence
+                n = len(entity_tokens)
+                for i in range(len(tokens) - n + 1):
+                    if tokens[i:i+n] == entity_tokens:
+                        # Found a match!
+                        start = max(0, i - self.window_size)
+                        end = min(len(tokens), i + n + self.window_size)
+                        
+                        window_tokens = tokens[start:end]
+                        windows.append(window_tokens)
+                        
         return windows
-
-        return results
 
     def _filter_subphrases(self, phrases):
         """
@@ -121,7 +119,7 @@ class PhraseExtractor:
     def extract_from_article(self, article_text, entity_word):
         """
         Extract framing phrases for an entity from a single article text.
-        Returns list of phrases.
+        Uses a maximal segment approach to reduce redundancy.
         """
         candidates = []
         text = self.clean_text(article_text)
@@ -129,29 +127,54 @@ class PhraseExtractor:
         # Determine context windows for this specific entity
         windows = self.get_context_windows(text, entity_word)
         
+        # Extract individual entity words for exclusion
+        entity_tokens_clean = set(word_tokenize(re.sub(r'[^\w\s]', '', entity_word.lower())))
+        
         for window in windows:
-            # Generate 2-gram, 3-gram, 4-gram
-            # We collect ALL candidates first, then filter
-            window_phrases = []
-            for n in range(2, 5):
-                grams = ngrams(window, n)
-                
-                for gram in grams:
-                    # Filter stopwords
-                    if all(word in self.stopwords for word in gram):
-                        continue
-                    if gram[0] in self.stopwords or gram[-1] in self.stopwords:
-                        continue
-                    if entity_word.lower() in gram:
-                        continue
-
-                    phrase = " ".join(gram)
-                    window_phrases.append(phrase)
+            # We want to find contiguous sequences of tokens that:
+            # 1. Do not contain any entity token
+            # 2. Are not entirely stopwords
+            # 3. (Optional) have meaningful boundaries
             
-            # Filter substrings per window to avoid "makan siang" AND "makan siang gratis" from same sentence
-            candidates.extend(self._filter_subphrases(window_phrases))
+            # Step 1: Split window by entity tokens
+            segments = []
+            current_segment = []
+            for token in window:
+                if token in entity_tokens_clean:
+                    if current_segment:
+                        segments.append(current_segment)
+                        current_segment = []
+                else:
+                    current_segment.append(token)
+            if current_segment:
+                segments.append(current_segment)
+                
+            # Step 2: Process segments into phrases
+            for seg in segments:
+                # Trim stopwords from both ends
+                start = 0
+                while start < len(seg) and seg[start] in self.stopwords:
+                    start += 1
+                
+                end = len(seg)
+                while end > start and seg[end-1] in self.stopwords:
+                    end -= 1
                     
-        return candidates
+                phrase_tokens = seg[start:end]
+                
+                # Minimum length 2, Maximum length say 6 to keep it a "phrase"
+                # If too long, we can keep the whole thing or break it, but 
+                # in a window of 7, 6 is reasonable.
+                if 2 <= len(phrase_tokens) <= 8:
+                    candidates.append(" ".join(phrase_tokens))
+                elif len(phrase_tokens) > 8:
+                    # For very long segments, take the parts closest to the entity?
+                    # Or just take the first 6?
+                    candidates.append(" ".join(phrase_tokens[:6]))
+                    candidates.append(" ".join(phrase_tokens[-6:]))
+            
+        # Deduplicate and filter substrings
+        return self._filter_subphrases(list(set(candidates)))
 
     def extract_phrases(self, entity_word, articles):
         """
@@ -176,6 +199,15 @@ class PhraseExtractor:
                 url = article.get('url')
                 if url:
                     phrase_data[phrase]["sources"].add(url)
+        
+        # FINAL AGGREGATE DEDUPLICATION
+        # This prevents having both "makan siang" and "makan siang gratis" in the final result 
+        # even if they came from different articles.
+        all_phrases = sorted(phrase_data.keys(), key=len, reverse=True)
+        kept_phrases = self._filter_subphrases(all_phrases)
+        
+        # Filter phrase_data down to kept phrases
+        phrase_data = {p: phrase_data[p] for p in kept_phrases}
                         
         # Sort by count desc
         sorted_phrases = sorted(phrase_data.items(), key=lambda x: x[1]['count'], reverse=True)
@@ -183,6 +215,7 @@ class PhraseExtractor:
         # Format output
         results = []
         for phrase, data in sorted_phrases:
+            # Saliency filter: common phrases are more interesting for framing
             if data['count'] > 1:
                 results.append({
                     "phrase": phrase, 

@@ -276,3 +276,20 @@ def insert_framing_results(session: Session, framing_results):
         session.rollback()
         logger.error(f"Failed to insert framing results: {e}")
         raise
+
+def delete_framing_for_articles(session: Session, article_ids: list):
+    """
+    Delete existing framing results for a list of articles.
+    Used to ensure idempotency when re-running extraction.
+    """
+    if not article_ids:
+        return
+        
+    try:
+        session.query(EntityFraming).filter(EntityFraming.article_id.in_(article_ids)).delete(synchronize_session=False)
+        session.commit()
+        # logger.info(f"Deleted old framing results for {len(article_ids)} articles")
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to delete old framing results: {e}")
+        raise
