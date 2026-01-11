@@ -28,7 +28,8 @@ from pipeline.signal.topic_modelling import analyze_topics
 from pipeline.db import (
     get_db_session, create_pipeline_run, update_pipeline_run, 
     insert_articles, insert_run_statistics, insert_sentiment_results,
-    insert_topic_models
+    insert_topic_models, delete_sentiment_results, delete_topic_models,
+    delete_ner_results
 )
 
 # Configure logging
@@ -217,6 +218,9 @@ def run_pipeline(limit=None):
                     })
             
             if sentiment_results:
+                # Idempotency: Delete old results first
+                sentiment_article_ids = list(set(r['article_id'] for r in sentiment_results))
+                delete_sentiment_results(db_session, sentiment_article_ids)
                 insert_sentiment_results(db_session, sentiment_results)
             
             update_pipeline_run(db_session, run_id, stage='signal', stats={
@@ -250,6 +254,9 @@ def run_pipeline(limit=None):
             topic_results = analyze_topics(tm_input_articles)
             
             if topic_results:
+                # Idempotency: Delete old results first
+                topic_article_ids = list(set(r['article_id'] for r in topic_results))
+                delete_topic_models(db_session, topic_article_ids)
                 insert_topic_models(db_session, topic_results)
                 logger.info(f"✓ Topic modelling completed: {len(topic_results)} articles processed")
             else:
@@ -263,7 +270,7 @@ def run_pipeline(limit=None):
             logger.info("=" * 60)
             
             from pipeline.signal.ner import analyze_all_ner
-            from pipeline.db import insert_ner_results
+            from pipeline.db import insert_ner_results, delete_ner_results
             
             # NER analysis
             articles_with_ner = analyze_all_ner(cleaned_articles)
@@ -283,6 +290,9 @@ def run_pipeline(limit=None):
                     })
             
             if ner_results:
+                # Idempotency: Delete old results first
+                ner_article_ids = list(set(r['article_id'] for r in ner_results))
+                delete_ner_results(db_session, ner_article_ids)
                 insert_ner_results(db_session, ner_results)
                 logger.info(f"✓ NER completed: {len(ner_results)} articles processed")
 

@@ -58,6 +58,22 @@ def insert_articles(session: Session, articles, run_id, run_date):
         logger.error(f"Failed to insert articles: {e}")
         raise
 
+def delete_sentiment_results(session: Session, article_ids: list):
+    """
+    Delete existing sentiment results for a list of articles.
+    Used to ensure idempotency.
+    """
+    if not article_ids:
+        return
+        
+    try:
+        session.query(SentimentAnalysis).filter(SentimentAnalysis.article_id.in_(article_ids)).delete(synchronize_session=False)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to delete old sentiment results: {e}")
+        raise
+
 def insert_sentiment_results(session: Session, sentiment_results):
     """
     Insert sentiment analysis results using ORM.
@@ -83,12 +99,6 @@ def insert_sentiment_results(session: Session, sentiment_results):
         session.commit()
         logger.info(f"Inserted {len(mappings)} sentiment results")
         
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Failed to insert sentiment results: {e}")
-        raise
-
-# ... (previous content)
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert sentiment results: {e}")
@@ -183,6 +193,22 @@ def insert_run_statistics(session: Session, run_id, stage, stats):
         logger.error(f"Failed to insert statistics: {e}")
         raise
 
+def delete_topic_models(session: Session, article_ids: list):
+    """
+    Delete existing topic modelling results for a list of articles.
+    Used to ensure idempotency.
+    """
+    if not article_ids:
+        return
+        
+    try:
+        session.query(TopicModelling).filter(TopicModelling.article_id.in_(article_ids)).delete(synchronize_session=False)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to delete old topic models: {e}")
+        raise
+
 def insert_topic_models(session: Session, topic_results):
     """
     Insert topic modelling results.
@@ -209,6 +235,22 @@ def insert_topic_models(session: Session, topic_results):
     except Exception as e:
         session.rollback()
         logger.error(f"Failed to insert topic models: {e}")
+        raise
+
+def delete_ner_results(session: Session, article_ids: list):
+    """
+    Delete existing NER results for a list of articles.
+    Used to ensure idempotency.
+    """
+    if not article_ids:
+        return
+        
+    try:
+        session.query(NamedEntityRecognition).filter(NamedEntityRecognition.article_id.in_(article_ids)).delete(synchronize_session=False)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Failed to delete old NER results: {e}")
         raise
 
 def insert_ner_results(session: Session, ner_results):
@@ -280,7 +322,7 @@ def insert_framing_results(session: Session, framing_results):
 def delete_framing_for_articles(session: Session, article_ids: list):
     """
     Delete existing framing results for a list of articles.
-    Used to ensure idempotency when re-running extraction.
+    Used to ensure idempotency.
     """
     if not article_ids:
         return
