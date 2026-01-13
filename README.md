@@ -79,6 +79,37 @@ This will:
 4. Analyze sentiment (Positive/Negative/Neutral)
 5. Store results in DB (if configured) or log completion
 
+### 5. Scheduling and Monitoring
+
+#### Scheduler (Cron Job)
+To run the pipeline periodically (e.g., every 24 hours), use the `scheduler.py` script:
+
+```bash
+# Run every 24 hours (default)
+./venv/bin/python3 scheduler.py
+
+# Run every 6 hours
+./venv/bin/python3 scheduler.py --interval-hours 6
+```
+
+> **Note**: This script runs in a loop. To keep it running in the background, use `nohup`, `screen`, or a systemd service.
+
+#### Monitor
+To check the status of recent runs and see when the next run is scheduled:
+
+```bash
+./venv/bin/python3 monitor.py
+```
+
+**Example Output:**
+```
+Next Scheduled Run: 2026-01-14 10:00:00
+--------------------------------------------------------------------------------
+Recent Runs:
+Run ID                Date        Status      Started             Duration
+2026-01-13_11-18-03   2026-01-13  completed   2026-01-13 11:18    0:01:44
+```
+
 ---
 
 ## Folder Structure
