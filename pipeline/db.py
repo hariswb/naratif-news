@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from pipeline.storage.models import Article, SentimentAnalysis, PipelineRun, RunStatistic, TopicModelling, NamedEntityRecognition, EntityFraming
+from pipeline.storage.models import Article, SentimentAnalysis, PipelineRun, RunStatistic, NamedEntityRecognition, EntityFraming
 from pipeline.storage.database import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -193,49 +193,7 @@ def insert_run_statistics(session: Session, run_id, stage, stats):
         logger.error(f"Failed to insert statistics: {e}")
         raise
 
-def delete_topic_models(session: Session, article_ids: list):
-    """
-    Delete existing topic modelling results for a list of articles.
-    Used to ensure idempotency.
-    """
-    if not article_ids:
-        return
-        
-    try:
-        session.query(TopicModelling).filter(TopicModelling.article_id.in_(article_ids)).delete(synchronize_session=False)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Failed to delete old topic models: {e}")
-        raise
 
-def insert_topic_models(session: Session, topic_results):
-    """
-    Insert topic modelling results.
-    topic_results: List of dicts with keys (article_id, method_name, topic_index, keywords)
-    """
-    if not topic_results:
-        return
-        
-    try:
-        # Prepare data for bulk insert
-        mappings = []
-        for result in topic_results:
-            mappings.append({
-                "article_id": result['article_id'],
-                "method_name": result['method_name'],
-                "topic_index": result['topic_index'],
-                "keywords": result['keywords']
-            })
-            
-        session.bulk_insert_mappings(TopicModelling, mappings)
-        session.commit()
-        logger.info(f"Inserted topic modelling results for {len(topic_results)} articles")
-        
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Failed to insert topic models: {e}")
-        raise
 
 def delete_ner_results(session: Session, article_ids: list):
     """

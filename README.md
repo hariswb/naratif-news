@@ -123,7 +123,7 @@ media-pipeline/
 │   ├── collect/          # RSS Fetching
 │   ├── parse/            # XML to JSONL
 │   ├── clean/            # Text Normalization
-│   ├── signal/           # Sentiment Analysis, Topic Modelling
+│   ├── signal/           # Sentiment Analysis, NER, Framing Phrase Extraction
 │   ├── aggregate/        # [Unimplemented] Aggregation
 │   └── narrative/        # [Unimplemented] Narrative generation
 ├── sql/                  # Database schema
@@ -172,18 +172,7 @@ Uses a local dictionary-based approach specialized for Indonesian language (Sast
 - **Positive/Negative Words**: Stored in `pipeline/signal/data/`
 - **Logic**: Counts weighted matches and normalizes score (-1, 0, 1).
 
-#### Topic Modelling
-Uses Latent Dirichlet Allocation (LDA) to discover abstract topics within the collected news articles.
-- **Library**: `scikit-learn` (TfidfVectorizer, LatentDirichletAllocation)
-- **Preprocessing**: 
-  - Acronym expansion (e.g., "KPK" -> "Komisi Pemberantasan Korupsi")
-  - Custom stopword removal (Indonesian)
-  - Text cleaning (lowercase, punctuation/number removal)
-- **Output**: Assigns a dominant topic index and top keywords to each article.
-- **Example Result**:
-  - *Topic 1*: pembangunan, anggaran, pajak, sisa, kerja, lebaran, piala, timnas, asia, indonesia
-  - *Topic 2*: prabowo, megawati, jadwal, pertemuan, indonesia, partai, kereta, api, merah, presiden
-  - *Topic 3*: trump, tarif, amerika, serikat, indonesia, impor, prabowo, republik, china, undang
+
 
 #### Named Entity Recognition (NER)
 Uses `cahya/bert-base-indonesian-NER` (NusaBert) to extract entities from news titles and summaries.

@@ -21,7 +21,7 @@ class Article(Base):
     
     # Relationships
     sentiment_analyses = relationship("SentimentAnalysis", back_populates="article", cascade="all, delete-orphan")
-    topic_modelling = relationship("TopicModelling", back_populates="article", cascade="all, delete-orphan")
+
     ner_results = relationship("NamedEntityRecognition", back_populates="article", cascade="all, delete-orphan")
     framing_results = relationship("EntityFraming", back_populates="article", cascade="all, delete-orphan")
 
@@ -84,21 +84,7 @@ class RunStatistic(Base):
     # Relationships
     run = relationship("PipelineRun", back_populates="statistics")
 
-class TopicModelling(Base):
-    __tablename__ = "topic_modelling"
 
-    id = Column(Integer, primary_key=True, index=True)
-    article_id = Column(Integer, ForeignKey("articles.id"), nullable=False)
-    method_name = Column(String(50), nullable=False)
-    
-    # Structured output
-    topic_index = Column(Integer, nullable=False)
-    keywords = Column(Text, nullable=False)
-    
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # Relationships
-    article = relationship("Article", back_populates="topic_modelling")
 
 class NamedEntityRecognition(Base):
     __tablename__ = "named_entity_recognition"

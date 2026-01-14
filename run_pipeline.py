@@ -24,11 +24,11 @@ from pipeline.collect.fetch_rss import collect_all_rss
 from pipeline.parse.rss_to_jsonl import parse_to_jsonl, load_jsonl
 from pipeline.clean.normalize import clean_articles
 from pipeline.signal.sentiment import analyze_all_sentiments, Inset
-from pipeline.signal.topic_modelling import analyze_topics
+from pipeline.signal.sentiment import analyze_all_sentiments, Inset
 from pipeline.db import (
     get_db_session, create_pipeline_run, update_pipeline_run, 
     insert_articles, insert_run_statistics, insert_sentiment_results,
-    insert_topic_models, delete_sentiment_results, delete_topic_models,
+    delete_sentiment_results,
     delete_ner_results
 )
 
@@ -230,37 +230,7 @@ def run_pipeline(limit=None):
         
         logger.info(f"✓ Signal stage completed: {signal_stats['total_analyzed']} articles analyzed")
 
-        # STAGE 6: TOPIC MODELLING
-        if db_session:
-            logger.info("\n" + "=" * 60)
-            logger.info("STAGE 6: TOPIC MODELLING")
-            logger.info("=" * 60)
-            
-            # Map articles to DB IDs for topic modelling
-            # We need to pass articles with IDs to analyze_topics if possible, OR
-            # map them back after analysis. analyze_topics takes list of dicts with 'id' and 'title'.
-            
-            # Construct input with db_ids
-            tm_input_articles = []
-            for article in cleaned_articles:
-                url = article.get('url')
-                db_id = url_to_id.get(url)
-                if db_id:
-                    tm_input_articles.append({
-                        "id": db_id,
-                        "title": article.get("title", "")
-                    })
-            
-            topic_results = analyze_topics(tm_input_articles)
-            
-            if topic_results:
-                # Idempotency: Delete old results first
-                topic_article_ids = list(set(r['article_id'] for r in topic_results))
-                delete_topic_models(db_session, topic_article_ids)
-                insert_topic_models(db_session, topic_results)
-                logger.info(f"✓ Topic modelling completed: {len(topic_results)} articles processed")
-            else:
-                logger.info("No topic modelling results to store")
+
 
 
         # STAGE 7: NER
