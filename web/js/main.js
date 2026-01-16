@@ -32,6 +32,66 @@ sevenDaysAgo.setDate(today.getDate() - 7);
 endDateInput.value = today.toISOString().split('T')[0];
 startDateInput.value = sevenDaysAgo.toISOString().split('T')[0];
 
+// Exclusion Filter State
+let excludedEntities = [];
+
+const excludedInput = document.getElementById('exclude-entity-input');
+const pillsContainer = document.getElementById('excluded-pills');
+
+function updatePills() {
+    pillsContainer.innerHTML = '';
+    excludedEntities.forEach(entity => {
+        const pill = document.createElement('div');
+        pill.className = 'pill';
+        pill.innerHTML = `
+            <span>${entity}</span>
+            <span class="pill-remove" data-entity="${entity}">×</span>
+        `;
+        pillsContainer.appendChild(pill);
+    });
+
+    // Add remove listeners
+    document.querySelectorAll('.pill-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const entityToRemove = e.target.getAttribute('data-entity');
+            excludedEntities = excludedEntities.filter(e => e !== entityToRemove);
+            updatePills();
+            renderNetwork();
+        });
+    });
+}
+
+excludedInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const val = excludedInput.value.trim();
+        if (val && !excludedEntities.includes(val)) {
+            excludedEntities.push(val);
+            excludedInput.value = '';
+            updatePills();
+            renderNetwork();
+        }
+    }
+});
+
+// Global reference to network data for re-rendering
+let currentNetworkData = null;
+
+function renderNetwork() {
+    if (currentNetworkData && currentNetworkData.nodes.length > 1) {
+        const showSearched = document.getElementById('toggle-searched-node').checked;
+        drawNetworkChart('#network-chart', currentNetworkData, {
+            showSearched,
+            excludedEntities
+        });
+    } else {
+        document.getElementById('network-chart').innerHTML = '<p class="no-data">No network data found</p>';
+    }
+}
+
+// Toggle listener
+document.getElementById('toggle-searched-node').addEventListener('change', () => renderNetwork());
+
+
 async function drawCharts(trends, phrases, network) {
     // Clear previous charts
     document.getElementById('trend-chart').innerHTML = '';
@@ -56,66 +116,9 @@ async function drawCharts(trends, phrases, network) {
         document.getElementById('phrase-chart').innerHTML = '<p class="no-data">No phrases found</p>';
     }
 
-    // Exclusion Filter State
-    let excludedEntities = [];
-
-    const excludedInput = document.getElementById('exclude-entity-input');
-    const pillsContainer = document.getElementById('excluded-pills');
-
-    function updatePills() {
-        pillsContainer.innerHTML = '';
-        excludedEntities.forEach(entity => {
-            const pill = document.createElement('div');
-            pill.className = 'pill';
-            pill.innerHTML = `
-                <span>${entity}</span>
-                <span class="pill-remove" data-entity="${entity}">×</span>
-            `;
-            pillsContainer.appendChild(pill);
-        });
-
-        // Add remove listeners
-        document.querySelectorAll('.pill-remove').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const entityToRemove = e.target.getAttribute('data-entity');
-                excludedEntities = excludedEntities.filter(e => e !== entityToRemove);
-                updatePills();
-                renderNetwork();
-            });
-        });
-    }
-
-    excludedInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            const val = excludedInput.value.trim();
-            if (val && !excludedEntities.includes(val)) {
-                excludedEntities.push(val);
-                excludedInput.value = '';
-                updatePills();
-                renderNetwork();
-            }
-        }
-    });
-
-    function renderNetwork() {
-        if (network && network.nodes.length > 1) {
-            const showSearched = document.getElementById('toggle-searched-node').checked;
-            drawNetworkChart('#network-chart', network, {
-                showSearched,
-                excludedEntities
-            });
-        } else {
-            document.getElementById('network-chart').innerHTML = '<p class="no-data">No network data found</p>';
-        }
-    }
+    // Update global data and render network
+    currentNetworkData = network;
     renderNetwork();
-
-    // Remove existing listener to prevent duplicates if drawCharts is called multiple times
-    const toggle = document.getElementById('toggle-searched-node');
-    const newToggle = toggle.cloneNode(true);
-    toggle.parentNode.replaceChild(newToggle, toggle);
-
-    newToggle.addEventListener('change', () => renderNetwork());
 }
 
 async function handleSearch() {
