@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Pipeline Visualization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Entity Insights</h1>
+            <div class="search-container">
+                <input type="text" id="entity-search" placeholder="Search entity (e.g. Jokowi)...">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Date Range:</label>
+                        <input type="date" id="start-date">
+                        <span>to</span>
+                        <input type="date" id="end-date">
+                    </div>
+                    <div class="filter-group">
+                        <label>NER Score:</label>
+                        <input type="number" id="min-score" step="0.1" min="0" max="1" value="0.5" placeholder="Min">
+                        <span>-</span>
+                        <input type="number" id="max-score" step="0.1" min="0" max="1" value="1.0" placeholder="Max">
+                    </div>
+                    <div class="filter-group" id="groups-container">
+                        <label>Include Tags:</label>
+                        <div class="tag-selector" id="entity-groups">
+                            <label><input type="checkbox" value="PER" checked> PER</label>
+                            <label><input type="checkbox" value="ORG" checked> ORG</label>
+                            <label><input type="checkbox" value="LOC" checked> LOC</label>
+                            <label><input type="checkbox" value="GPE" checked> GPE</label>
+                            <label><input type="checkbox" value="EVT"> EVT</label>
+                            <label><input type="checkbox" value="FAC"> FAC</label>
+                        </div>
+                    </div>
+                </div>
+                <button id="search-btn">Search</button>
+            </div>
+        </header>
+
+        <main id="dashboard" class="hidden">
+            <section class="chart-section" id="trend-section">
+                <div class="section-header">
+                    <h2>Weekly Sentiment Trend</h2>
+                    <button class="download-btn" data-target="trend-chart">Download</button>
+                </div>
+                <div id="trend-chart" class="chart-container"></div>
+            </section>
+
+            <section class="chart-section" id="phrase-section">
+                <div class="section-header">
+                    <h2>Dominant Phrases</h2>
+                    <button class="download-btn" data-target="phrase-chart">Download</button>
+                </div>
+                <div id="phrase-chart" class="chart-container"></div>
+            </section>
+
+            <section class="chart-section" id="network-section">
+                <div class="section-header">
+                    <h2>Co-occurrence Network</h2>
+                    <button class="download-btn" data-target="network-chart">Download</button>
+                </div>
+                <div id="network-chart" class="chart-container"></div>
+            </section>
+        </main>
+
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Analyzing data...</p>
+        </div>
+    </div>
+
+    <script type="module" src="/js/main.js"></script>
+</body>
+
+</html>
