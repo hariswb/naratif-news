@@ -99,30 +99,23 @@ def get_network(
 ):
     start_dt, end_dt = _get_date_range(start_date, end_date)
     
-    result = get_network_data(db, entity, start_dt, end_dt, min_score, max_score, groups)
+    nodes_result, links_result = get_network_data(db, entity, start_dt, end_dt, min_score, max_score, groups)
     
-    # Construct graph structure
-    nodes = [{"id": entity, "group": "SEARCHED", "count": 0}] # Central node
-    links = []
-    
-    max_count = 0
-    
-    for row in result:
+    nodes = []
+    for row in nodes_result:
         nodes.append({
             "id": row.word,
-            "group": row.entity_group,
+            "group": "SEARCHED" if row.word.lower() == entity.lower() else row.entity_group,
             "count": row.count
         })
+        
+    links = []
+    for row in links_result:
         links.append({
-            "source": entity,
-            "target": row.word,
-            "value": row.count
+            "source": row.source,
+            "target": row.target,
+            "value": row.value
         })
-        if row.count > max_count:
-            max_count = row.count
-            
-    # Update central node size (arbitrary logic or sum of connections)
-    nodes[0]["count"] = max_count * 1.2 
     
     return {"nodes": nodes, "links": links}
 

@@ -117,7 +117,11 @@ h2 {
     width: 100%;
     min-height: 400px;
     position: relative;
-    overflow: hidden; /* Prevent D3 spill */
+    overflow: hidden;
+}
+
+#network-chart {
+    min-height: 80vh;
 }
 
 .grid-row {
@@ -155,8 +159,13 @@ h2 {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* D3 Tooltip */
@@ -168,7 +177,7 @@ h2 {
     border-radius: 6px;
     font-size: 0.875rem;
     pointer-events: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--border-color);
     z-index: 10;
     transition: opacity 0.2s;
