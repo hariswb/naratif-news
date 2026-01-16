@@ -62,8 +62,8 @@ export function drawNetworkChart(selector, data, options = { showSearched: true,
         }));
 
     const link = g.append("g")
-        .attr("stroke", "#475569")
-        .attr("stroke-opacity", 0.4)
+        .attr("stroke", "#aaacafff")
+        .attr("stroke-opacity", 0.6)
         .selectAll("line")
         .data(links)
         .join("line")
@@ -76,7 +76,7 @@ export function drawNetworkChart(selector, data, options = { showSearched: true,
         .data(nodes)
         .join("circle")
         .attr("r", d => Math.sqrt(d.count) * 2 + 8)
-        .attr("fill", d => d.group === "SEARCHED" ? "#38bdf8" : color(d.group))
+        .attr("fill", d => d.group === "SEARCHED" ? "#105b7eff" : color(d.group))
         .style("cursor", "pointer")
         .call(drag(simulation))
         .on("click", (event, d) => {
@@ -85,12 +85,12 @@ export function drawNetworkChart(selector, data, options = { showSearched: true,
 
             // Reset all
             node.attr("stroke-width", 1.5).attr("stroke", "#fff");
-            link.attr("stroke", "#475569").attr("stroke-opacity", 0.4);
+            link.attr("stroke", "#414244ff").attr("stroke-opacity", 0.6);
 
             if (active) {
-                d3.select(event.currentTarget).attr("stroke-width", 4).attr("stroke", "#38bdf8");
+                d3.select(event.currentTarget).attr("stroke-width", 4).attr("stroke", "#0ea5e9");
                 link.filter(l => l.source.id === d.id || l.target.id === d.id)
-                    .attr("stroke", "#38bdf8")
+                    .attr("stroke", "#0ea5e9")
                     .attr("stroke-opacity", 1)
                     .attr("stroke-width", l => Math.sqrt(l.value) * 2.5);
             }
@@ -106,11 +106,11 @@ export function drawNetworkChart(selector, data, options = { showSearched: true,
         .attr("dx", d => Math.sqrt(d.count) * 2 + 12)
         .attr("dy", ".35em")
         .text(d => d.id)
-        .style("fill", "#fff")
+        .style("fill", "#1e293b")
         .style("font-size", "12px")
-        .style("font-weight", "500")
+        .style("font-weight", "600")
         .style("pointer-events", "none")
-        .style("text-shadow", "0 1px 4px rgba(0,0,0,0.8)");
+        .style("text-shadow", "0 1px 4px rgba(255,255,255,0.8)");
 
     simulation.on("tick", () => {
         link
@@ -132,7 +132,7 @@ export function drawNetworkChart(selector, data, options = { showSearched: true,
     svg.on("click", () => {
         nodes.forEach(n => n.active = false);
         node.attr("stroke-width", 1.5).attr("stroke", "#fff");
-        link.attr("stroke", "#475569").attr("stroke-opacity", 0.4).attr("stroke-width", d => Math.sqrt(d.value) * 1.5);
+        link.attr("stroke", "#cbd5e1").attr("stroke-opacity", 0.6).attr("stroke-width", d => Math.sqrt(d.value) * 1.5);
     });
 
     // Legend
@@ -148,14 +148,14 @@ export function drawNetworkChart(selector, data, options = { showSearched: true,
 
         legendRow.append("circle")
             .attr("r", 5)
-            .attr("fill", group === "SEARCHED" ? "#38bdf8" : color(group));
+            .attr("fill", group === "SEARCHED" ? "#0ea5e9" : color(group));
 
         legendRow.append("text")
             .attr("x", 15)
             .attr("y", 4)
             .style("font-size", "12px")
             .style("font-family", "sans-serif")
-            .style("fill", "#94a3b8") // Slate-400 for better visibility on dark bg
+            .style("fill", "#64748b") // Slate-500 for better visibility on light bg
             .text(group);
     });
 

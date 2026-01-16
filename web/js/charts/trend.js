@@ -44,8 +44,7 @@ export function drawTrendChart(selector, data) {
 
     const line = d3.line()
         .x(d => x(d.date))
-        .y(d => y(d.value))
-        .curve(d3.curveMonotoneX); // Smooth lines
+        .y(d => y(d.value));
 
     let keys = ["negative", "neutral", "positive"];
 
@@ -60,21 +59,21 @@ export function drawTrendChart(selector, data) {
             .text(key);
     });
 
-    // Axes with Bootstrap dark mode colors
+    // Axes with Bootstrap light mode colors
     svg.append("g")
         .attr("transform", `translate(0,${height - margin.bottom})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
-        .style("fill", "#94a3b8");
+        .style("fill", "#64748b");
 
     svg.append("g")
         .attr("transform", `translate(${margin.left},0)`)
         .call(d3.axisLeft(y).ticks(5))
         .selectAll("text")
-        .style("fill", "#94a3b8");
+        .style("fill", "#64748b");
 
     // Axis lines
-    svg.selectAll(".domain, .tick line").style("stroke", "#334155");
+    svg.selectAll(".domain, .tick line").style("stroke", "#e2e8f0");
 
     // Legend
     const legend = svg.append("g")
@@ -95,7 +94,7 @@ export function drawTrendChart(selector, data) {
             .attr("x", 18)
             .attr("y", i * 20 + 10)
             .text(key)
-            .style("fill", "#cbd5e1")
+            .style("fill", "#475569")
             .style("font-size", "12px")
             .style("font-family", "sans-serif");
     });

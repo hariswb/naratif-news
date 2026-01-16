@@ -13,14 +13,20 @@ export function drawPhraseChart(selector, data, page = 0, rowsPerPage = 10, onPa
 
     // Create table structure
     const table = document.createElement('table');
-    table.className = 'table table-dark table-hover table-sm table-borderless mb-0 bg-transparent';
+    table.className = 'table table-hover table-borderless mb-0 align-middle w-100';
+    table.style.tableLayout = 'fixed';
 
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     ['Phrase', 'Count'].forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
-        th.className = 'text-body-secondary text-uppercase fs-7 fw-bold ls-1';
+        th.className = 'text-secondary text-uppercase fs-7 fw-bold ls-1 px-4 py-3 border-bottom border-dark border-opacity-10';
+
+        if (text === 'Count') {
+            th.classList.add('text-end');
+            th.style.width = '100px'; // Fixed width for count
+        }
         headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -31,11 +37,11 @@ export function drawPhraseChart(selector, data, page = 0, rowsPerPage = 10, onPa
         const tr = document.createElement('tr');
         const tdPhrase = document.createElement('td');
         tdPhrase.textContent = d.phrase;
-        tdPhrase.className = 'text-white fw-medium'; // Make phrase pop
+        tdPhrase.className = 'text-body-emphasis fw-medium px-4 py-2 text-truncate'; // Truncate long text
 
         const tdCount = document.createElement('td');
         tdCount.textContent = d.count;
-        tdCount.className = 'text-end font-monospace text-primary'; // Align count right
+        tdCount.className = 'text-end font-monospace text-primary px-4 py-2';
 
         tr.appendChild(tdPhrase);
         tr.appendChild(tdCount);
