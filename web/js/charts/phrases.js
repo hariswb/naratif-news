@@ -13,13 +13,14 @@ export function drawPhraseChart(selector, data, page = 0, rowsPerPage = 10, onPa
 
     // Create table structure
     const table = document.createElement('table');
-    table.className = 'phrases-table';
+    table.className = 'table table-dark table-hover table-sm table-borderless mb-0 bg-transparent';
 
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     ['Phrase', 'Count'].forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
+        th.className = 'text-body-secondary text-uppercase fs-7 fw-bold ls-1';
         headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -30,8 +31,12 @@ export function drawPhraseChart(selector, data, page = 0, rowsPerPage = 10, onPa
         const tr = document.createElement('tr');
         const tdPhrase = document.createElement('td');
         tdPhrase.textContent = d.phrase;
+        tdPhrase.className = 'text-white fw-medium'; // Make phrase pop
+
         const tdCount = document.createElement('td');
         tdCount.textContent = d.count;
+        tdCount.className = 'text-end font-monospace text-primary'; // Align count right
+
         tr.appendChild(tdPhrase);
         tr.appendChild(tdCount);
         tbody.appendChild(tr);
@@ -43,18 +48,21 @@ export function drawPhraseChart(selector, data, page = 0, rowsPerPage = 10, onPa
     const totalPages = Math.ceil(data.length / rowsPerPage);
     if (totalPages > 1) {
         const controls = document.createElement('div');
-        controls.className = 'pagination-controls';
+        controls.className = 'd-flex justify-content-center align-items-center gap-3 mt-3 pt-2 border-top border-secondary-subtle';
 
         const prevBtn = document.createElement('button');
-        prevBtn.textContent = '<';
+        prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i>';
+        prevBtn.className = 'btn btn-sm btn-outline-secondary border-0';
         prevBtn.disabled = page === 0;
         prevBtn.onclick = () => onPageChange(page - 1);
 
         const pageInfo = document.createElement('span');
-        pageInfo.textContent = `Page ${page + 1} of ${totalPages}`;
+        pageInfo.className = 'text-secondary small font-monospace';
+        pageInfo.textContent = `${page + 1} / ${totalPages}`;
 
         const nextBtn = document.createElement('button');
-        nextBtn.textContent = '>';
+        nextBtn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        nextBtn.className = 'btn btn-sm btn-outline-secondary border-0';
         nextBtn.disabled = page >= totalPages - 1;
         nextBtn.onclick = () => onPageChange(page + 1);
 

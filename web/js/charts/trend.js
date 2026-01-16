@@ -4,16 +4,7 @@ export function drawTrendChart(selector, data) {
     const height = container.clientHeight || 400;
     const margin = { top: 20, right: 30, bottom: 30, left: 40 };
 
-    // Preprocess data: Group by date and label to Stack?
-    // User wants "weekly trend with sentiment". 
-    // We can do a stacked bar chart or a multi-line chart using "positive", "negative", "neutral" as series.
-    // Let's do a Stacked Area Chart or Stacked Bar. Stacked Bar is better for counts. Area is "sexier".
-    // Let's try Stacked Area.
-
     // 1. Pivot data
-    // existing format: [{date: "...", label: "positive", count: 10}, ...]
-    // needed: [{date: "...", positive: 10, negative: 5, neutral: 2}, ...]
-
     const pivoted = {};
     const dates = new Set();
 
@@ -26,10 +17,17 @@ export function drawTrendChart(selector, data) {
 
     const chartData = Object.values(pivoted).sort((a, b) => a.date - b.date);
 
+    // Filter out data points with 0 total counts if needed, but let's keep timeseries continuity
+
+    // Clear previous
+    d3.select(selector).innerHTML = "";
+
     const svg = d3.select(selector).append("svg")
         .attr("viewBox", [0, 0, width, height])
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height)
+        .style("max-width", "100%")
+        .style("background", "transparent");
 
     const x = d3.scaleTime()
         .domain(d3.extent(chartData, d => d.date))
@@ -42,11 +40,12 @@ export function drawTrendChart(selector, data) {
 
     const color = d3.scaleOrdinal()
         .domain(["negative", "neutral", "positive"])
-        .range(["#f87171", "#94a3b8", "#4ade80"]); // Red, Gray, Green
+        .range(["#ef4444", "#94a3b8", "#22c55e"]); // Red-500, Slate-400, Green-500
 
     const line = d3.line()
         .x(d => x(d.date))
-        .y(d => y(d.value));
+        .y(d => y(d.value))
+        .curve(d3.curveMonotoneX); // Smooth lines
 
     let keys = ["negative", "neutral", "positive"];
 
@@ -61,32 +60,43 @@ export function drawTrendChart(selector, data) {
             .text(key);
     });
 
+    // Axes with Bootstrap dark mode colors
     svg.append("g")
         .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x));
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .style("fill", "#94a3b8");
 
     svg.append("g")
         .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y).ticks(5))
+        .selectAll("text")
+        .style("fill", "#94a3b8");
+
+    // Axis lines
+    svg.selectAll(".domain, .tick line").style("stroke", "#334155");
 
     // Legend
     const legend = svg.append("g")
-        .attr("transform", `translate(${width - 150}, ${margin.top})`);
+        .attr("transform", `translate(${width - 120}, ${margin.top})`);
 
+    // Reorder for legend
     keys = ["positive", "neutral", "negative"];
     keys.forEach((key, i) => {
         legend.append("rect")
             .attr("x", 0)
             .attr("y", i * 20)
-            .attr("width", 15)
-            .attr("height", 15)
+            .attr("width", 12)
+            .attr("height", 12)
+            .attr("rx", 2)
             .attr("fill", color(key));
 
         legend.append("text")
-            .attr("x", 20)
-            .attr("y", i * 20 + 12)
+            .attr("x", 18)
+            .attr("y", i * 20 + 10)
             .text(key)
-            .style("fill", "#fff")
-            .style("font-size", "12px");
+            .style("fill", "#cbd5e1")
+            .style("font-size", "12px")
+            .style("font-family", "sans-serif");
     });
 }

@@ -56,8 +56,66 @@ async function drawCharts(trends, phrases, network) {
         document.getElementById('phrase-chart').innerHTML = '<p class="no-data">No phrases found</p>';
     }
 
-    if (network && network.nodes.length > 1) drawNetworkChart('#network-chart', network);
-    else document.getElementById('network-chart').innerHTML = '<p class="no-data">No network data found</p>';
+    // Exclusion Filter State
+    let excludedEntities = [];
+
+    const excludedInput = document.getElementById('exclude-entity-input');
+    const pillsContainer = document.getElementById('excluded-pills');
+
+    function updatePills() {
+        pillsContainer.innerHTML = '';
+        excludedEntities.forEach(entity => {
+            const pill = document.createElement('div');
+            pill.className = 'pill';
+            pill.innerHTML = `
+                <span>${entity}</span>
+                <span class="pill-remove" data-entity="${entity}">×</span>
+            `;
+            pillsContainer.appendChild(pill);
+        });
+
+        // Add remove listeners
+        document.querySelectorAll('.pill-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const entityToRemove = e.target.getAttribute('data-entity');
+                excludedEntities = excludedEntities.filter(e => e !== entityToRemove);
+                updatePills();
+                renderNetwork();
+            });
+        });
+    }
+
+    excludedInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const val = excludedInput.value.trim();
+            if (val && !excludedEntities.includes(val)) {
+                excludedEntities.push(val);
+                excludedInput.value = '';
+                updatePills();
+                renderNetwork();
+            }
+        }
+    });
+
+    function renderNetwork() {
+        if (network && network.nodes.length > 1) {
+            const showSearched = document.getElementById('toggle-searched-node').checked;
+            drawNetworkChart('#network-chart', network, {
+                showSearched,
+                excludedEntities
+            });
+        } else {
+            document.getElementById('network-chart').innerHTML = '<p class="no-data">No network data found</p>';
+        }
+    }
+    renderNetwork();
+
+    // Remove existing listener to prevent duplicates if drawCharts is called multiple times
+    const toggle = document.getElementById('toggle-searched-node');
+    const newToggle = toggle.cloneNode(true);
+    toggle.parentNode.replaceChild(newToggle, toggle);
+
+    newToggle.addEventListener('change', () => renderNetwork());
 }
 
 async function handleSearch() {
@@ -75,8 +133,8 @@ async function handleSearch() {
     const networkParams = { ...commonParams, min_score: minScore, max_score: maxScore, groups: selectedGroups };
 
     // UI State
-    dashboard.classList.add('hidden');
-    loading.classList.remove('hidden');
+    dashboard.classList.add('d-none'); // Bootstrap visibility
+    loading.classList.remove('d-none'); // Bootstrap visibility
 
     try {
         // Parallel data fetching
@@ -87,14 +145,14 @@ async function handleSearch() {
         ]);
 
         // Render
-        loading.classList.add('hidden');
-        dashboard.classList.remove('hidden');
+        loading.classList.add('d-none');
+        dashboard.classList.remove('d-none');
 
         await drawCharts(trends, phrases, network);
 
     } catch (err) {
         console.error(err);
-        loading.classList.add('hidden');
+        loading.classList.add('d-none');
         alert('Failed to fetch data. See console.');
     }
 }
@@ -142,3 +200,15 @@ function downloadSvgAsPng(svgElement, filename) {
 
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
 }
+
+// Side Panel Toggle (Desktop)
+const sidePanel = document.getElementById('side-panel');
+const togglePanelBtn = document.getElementById('toggle-panel-btn');
+const closePanelBtnDesktop = document.getElementById('close-panel-desktop');
+
+function togglePanel() {
+    sidePanel.classList.toggle('collapsed');
+}
+
+if (togglePanelBtn) togglePanelBtn.addEventListener('click', togglePanel);
+if (closePanelBtnDesktop) closePanelBtnDesktop.addEventListener('click', togglePanel);

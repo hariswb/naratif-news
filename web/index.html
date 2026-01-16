@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -8,80 +8,220 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 
-<body>
-    <div class="app-container">
-        <header>
-            <h1>Entity Insights</h1>
-            <div class="search-container">
-                <input type="text" id="entity-search" placeholder="Search entity (e.g. Jokowi)...">
-                <div class="filters">
-                    <div class="filter-group">
-                        <label>Date Range:</label>
-                        <input type="date" id="start-date">
-                        <span>to</span>
-                        <input type="date" id="end-date">
+<body class="bg-body-tertiary font-monospace-numbers">
+
+    <div class="d-flex vh-100 overflow-hidden flex-column flex-lg-row">
+
+        <!-- Main Content -->
+        <main class="flex-grow-1 order-2 order-lg-1 d-flex flex-column h-100 overflow-hidden">
+            <!-- Top Bar -->
+            <header class="navbar navbar-expand bg-body border-bottom px-4 py-3 sticky-top">
+                <div class="container-fluid px-0">
+                    <h1 class="navbar-brand mb-0 h1 fw-bold text-primary">Entity Insights</h1>
+                    <button id="toggle-panel-btn" class="btn btn-outline-secondary btn-sm d-none d-lg-block"
+                        title="Toggle Filters">
+                        <i class="bi bi-layout-sidebar-reverse"></i>
+                    </button>
+                    <!-- Mobile Toggle -->
+                    <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas"
+                        data-bs-target="#side-panel">
+                        <i class="bi bi-list"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div id="dashboard" class="container-fluid p-4 overflow-y-auto flex-grow-1 d-none">
+
+                <!-- Charts Grid -->
+                <div class="row g-4">
+                    <!-- Trend Chart -->
+                    <div class="col-12 col-xl-6">
+                        <div class="card h-100 shadow-sm">
+                            <div
+                                class="card-header d-flex justify-content-between align-items-center bg-transparent py-3">
+                                <h5 class="card-title mb-0">Weekly Sentiment Trend</h5>
+                                <button class="btn btn-sm btn-outline-light download-btn" data-target="trend-chart">
+                                    <i class="bi bi-download me-1"></i> PNG
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="trend-chart" class="chart-container w-100" style="min-height: 350px;"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label>NER Score:</label>
-                        <input type="number" id="min-score" step="0.1" min="0" max="1" value="0.5" placeholder="Min">
-                        <span>-</span>
-                        <input type="number" id="max-score" step="0.1" min="0" max="1" value="1.0" placeholder="Max">
+
+                    <!-- Phrase Chart -->
+                    <div class="col-12 col-xl-6">
+                        <div class="card h-100 shadow-sm">
+                            <div
+                                class="card-header d-flex justify-content-between align-items-center bg-transparent py-3">
+                                <h5 class="card-title mb-0">Dominant Phrases</h5>
+                                <button class="btn btn-sm btn-outline-light download-btn" data-target="phrase-chart">
+                                    <i class="bi bi-download me-1"></i> PNG
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="phrase-chart" class="chart-container w-100" style="min-height: 350px;"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="filter-group" id="groups-container">
-                        <label>Include Tags:</label>
-                        <div class="tag-selector" id="entity-groups">
-                            <label><input type="checkbox" value="PER" checked> PER</label>
-                            <label><input type="checkbox" value="ORG" checked> ORG</label>
-                            <label><input type="checkbox" value="NOR" checked> NOR</label>
-                            <label><input type="checkbox" value="LAW" checked> LAW</label>
-                            <label><input type="checkbox" value="EVT" checked> EVT</label>
-                            <label><input type="checkbox" value="GPE"> GPE</label>
-                            <label><input type="checkbox" value="MON"> MON</label>
-                            <label><input type="checkbox" value="PRD"> PRD</label>
-                            <label><input type="checkbox" value="REL"> REL</label>
+
+                    <!-- Network Chart (Full Width) -->
+                    <div class="col-12">
+                        <div class="card shadow-sm border-primary border-opacity-25">
+                            <div
+                                class="card-header d-flex flex-wrap gap-3 justify-content-between align-items-center bg-transparent py-3">
+                                <h5 class="card-title mb-0">Co-occurrence Network</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-outline-light download-btn"
+                                        data-target="network-chart">
+                                        <i class="bi bi-download me-1"></i> PNG
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-0 position-relative bg-black bg-opacity-25">
+                                <div id="network-chart" class="chart-container w-100" style="min-height: 75vh;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <button id="search-btn">Search</button>
             </div>
-        </header>
 
-        <main id="dashboard" class="hidden">
-            <section class="chart-section" id="trend-section">
-                <div class="section-header">
-                    <h2>Weekly Sentiment Trend</h2>
-                    <button class="download-btn" data-target="trend-chart">Download</button>
-                </div>
-                <div id="trend-chart" class="chart-container"></div>
-            </section>
-
-            <section class="chart-section" id="phrase-section">
-                <div class="section-header">
-                    <h2>Dominant Phrases</h2>
-                    <button class="download-btn" data-target="phrase-chart">Download</button>
-                </div>
-                <div id="phrase-chart" class="chart-container"></div>
-            </section>
-
-            <section class="chart-section" id="network-section">
-                <div class="section-header">
-                    <h2>Co-occurrence Network</h2>
-                    <button class="download-btn" data-target="network-chart">Download</button>
-                </div>
-                <div id="network-chart" class="chart-container"></div>
-            </section>
+            <!-- Loading State -->
+            <div id="loading" class="d-none position-absolute top-50 start-50 translate-middle text-center">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                <p class="text-body-secondary">Crunching data...</p>
+            </div>
         </main>
 
-        <div id="loading" class="hidden">
-            <div class="spinner"></div>
-            <p>Analyzing data...</p>
-        </div>
+        <!-- Side Panel (Responsive Offcanvas) -->
+        <aside
+            class="offcanvas-lg offcanvas-end bg-body border-start order-1 order-lg-2 h-100 overflow-y-auto transition-width"
+            tabindex="-1" id="side-panel" aria-labelledby="sidePanelLabel">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title" id="sidePanelLabel">Analysis Controls</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#side-panel"
+                    aria-label="Close"></button>
+            </div>
+
+            <div class="offcanvas-body d-flex flex-column p-4">
+                <div class="d-none d-lg-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0 fw-bold">Analysis Controls</h5>
+                    <button id="close-panel-desktop" class="btn-close"></button>
+                </div>
+
+                <!-- Query Section -->
+                <div class="mb-5">
+                    <h6 class="text-uppercase text-body-secondary fw-bold fs-7 mb-3 ls-1">Query</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label text-body-secondary small">Search Entity</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-body-tertiary border-end-0"><i
+                                    class="bi bi-search"></i></span>
+                            <input type="text" id="entity-search" class="form-control border-start-0 ps-0"
+                                placeholder="e.g. Jokowi">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-body-secondary small">Date Range</label>
+                        <div class="d-flex gap-2">
+                            <input type="date" id="start-date" class="form-control form-control-sm">
+                            <input type="date" id="end-date" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-body-secondary small">NER Score (> <span
+                                id="min-score-val">0.5</span>)</label>
+                        <input type="range" class="form-range" id="min-score" min="0" max="1" step="0.1" value="0.5">
+                        <input type="hidden" id="max-score" value="1.0">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-body-secondary small mb-2">Entity Types</label>
+                        <div class="d-flex flex-wrap gap-2" id="entity-groups">
+                            <input type="checkbox" class="btn-check" id="tag-PER" value="PER" checked
+                                autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-PER">PER</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-ORG" value="ORG" checked
+                                autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-ORG">ORG</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-NOR" value="NOR" checked
+                                autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-NOR">NOR</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-LAW" value="LAW" checked
+                                autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-LAW">LAW</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-EVT" value="EVT" checked
+                                autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-EVT">EVT</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-GPE" value="GPE" autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-GPE">GPE</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-mon" value="MON" autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-mon">MON</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-prd" value="PRD" autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-prd">PRD</label>
+
+                            <input type="checkbox" class="btn-check" id="tag-rel" value="REL" autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag-rel">REL</label>
+                        </div>
+                    </div>
+
+                    <button id="search-btn" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+                        <i class="bi bi-lightning-charge-fill me-2"></i>Analyze
+                    </button>
+                </div>
+
+                <!-- Network Filters -->
+                <div>
+                    <h6 class="text-uppercase text-body-secondary fw-bold fs-7 mb-3 ls-1">Network Filters</h6>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch p-0 d-flex justify-content-between align-items-center">
+                            <label class="form-check-label text-body-secondary small" for="toggle-searched-node">Show
+                                Searched Entity</label>
+                            <input class="form-check-input ms-0" type="checkbox" role="switch" id="toggle-searched-node"
+                                checked>
+                        </div>
+                        <div class="form-text text-muted small mt-1">Hides the central node to declutter.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-body-secondary small">Exclude Entities</label>
+                        <div class="border rounded bg-body-tertiary p-2">
+                            <div id="excluded-pills" class="d-flex flex-wrap gap-2 mb-2"></div>
+                            <input type="text" id="exclude-entity-input"
+                                class="form-control form-control-sm bg-transparent border-0 px-0 text-white"
+                                placeholder="Type & Enter to exclude..." autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
     </div>
 
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
     <script type="module" src="/js/main.js"></script>
 </body>
 

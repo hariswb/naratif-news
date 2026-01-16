@@ -1,9 +1,32 @@
-export function drawNetworkChart(selector, data) {
+export function drawNetworkChart(selector, data, options = { showSearched: true, excludedEntities: [] }) {
     const container = document.querySelector(selector);
     const width = container.clientWidth;
-    const height = window.innerHeight * 0.8; // Fill 80% viewport height for better fit within card
+    const height = container.clientHeight || 600; // Use container height (set by CSS min-height) or fallback
+
+    // Clear previous SVG
+    d3.select(selector).selectAll("svg").remove();
 
     const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    // Filter data based on options
+    let nodes = data.nodes.map(d => ({ ...d })); // Deep copy to prevent mutating original data
+    let links = data.links.map(d => ({ ...d }));
+
+    // Filter excluded entities
+    if (options.excludedEntities && options.excludedEntities.length > 0) {
+        const excluded = new Set(options.excludedEntities.map(e => e.toLowerCase()));
+        nodes = nodes.filter(n => !excluded.has(n.id.toLowerCase()));
+        links = links.filter(l => !excluded.has(l.source.toLowerCase()) && !excluded.has(l.target.toLowerCase()));
+    }
+
+    if (!options.showSearched) {
+        const searchedNode = nodes.find(n => n.group === "SEARCHED");
+        if (searchedNode) {
+            nodes = nodes.filter(n => n.id !== searchedNode.id);
+            // Filter links where source or target is the searched node's ID
+            links = links.filter(l => l.source !== searchedNode.id && l.target !== searchedNode.id);
+        }
+    }
 
     const svg = d3.select(selector).append("svg")
         .attr("viewBox", [0, 0, width, height])
@@ -16,11 +39,17 @@ export function drawNetworkChart(selector, data) {
     const g = svg.append("g");
 
     // Force simulation with central gravity
-    const simulation = d3.forceSimulation(data.nodes)
-        .force("link", d3.forceLink(data.links).id(d => d.id).distance(d => 100 / Math.sqrt(d.value)))
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force("x", d3.forceX(width / 2).strength(0.1))
-        .force("y", d3.forceY(height / 2).strength(0.1))
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(d => {
+            // Note: d.source and d.target here are node objects after forceLink processes them
+            const isSearched = d.source.group === "SEARCHED" || d.target.group === "SEARCHED" ||
+                d.source.id === nodes.find(n => n.group === "SEARCHED")?.id ||
+                d.target.id === nodes.find(n => n.group === "SEARCHED")?.id;
+            return (isSearched ? 200 : 100) / Math.sqrt(d.value);
+        }))
+        .force("charge", d3.forceManyBody().strength(d => d.group === "SEARCHED" ? -2000 : -300))
+        .force("x", d3.forceX(width / 2).strength(0.05))
+        .force("y", d3.forceY(height / 2).strength(0.05))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force("collide", d3.forceCollide(d => Math.sqrt(d.count) * 2 + 15));
 
@@ -36,7 +65,7 @@ export function drawNetworkChart(selector, data) {
         .attr("stroke", "#475569")
         .attr("stroke-opacity", 0.4)
         .selectAll("line")
-        .data(data.links)
+        .data(links)
         .join("line")
         .attr("stroke-width", d => Math.sqrt(d.value) * 1.5);
 
@@ -44,7 +73,7 @@ export function drawNetworkChart(selector, data) {
         .attr("stroke", "#fff")
         .attr("stroke-width", 1.5)
         .selectAll("circle")
-        .data(data.nodes)
+        .data(nodes)
         .join("circle")
         .attr("r", d => Math.sqrt(d.count) * 2 + 8)
         .attr("fill", d => d.group === "SEARCHED" ? "#38bdf8" : color(d.group))
@@ -72,7 +101,7 @@ export function drawNetworkChart(selector, data) {
 
     const labels = g.append("g")
         .selectAll("text")
-        .data(data.nodes)
+        .data(nodes)
         .join("text")
         .attr("dx", d => Math.sqrt(d.count) * 2 + 12)
         .attr("dy", ".35em")
@@ -101,9 +130,33 @@ export function drawNetworkChart(selector, data) {
 
     // Reset highlighting on clicking background
     svg.on("click", () => {
-        data.nodes.forEach(n => n.active = false);
+        nodes.forEach(n => n.active = false);
         node.attr("stroke-width", 1.5).attr("stroke", "#fff");
         link.attr("stroke", "#475569").attr("stroke-opacity", 0.4).attr("stroke-width", d => Math.sqrt(d.value) * 1.5);
+    });
+
+    // Legend
+    const uniqueGroups = Array.from(new Set(nodes.map(d => d.group))).sort();
+
+    const legend = svg.append("g")
+        .attr("class", "legend")
+        .attr("transform", "translate(20, 20)");
+
+    uniqueGroups.forEach((group, i) => {
+        const legendRow = legend.append("g")
+            .attr("transform", `translate(0, ${i * 20})`);
+
+        legendRow.append("circle")
+            .attr("r", 5)
+            .attr("fill", group === "SEARCHED" ? "#38bdf8" : color(group));
+
+        legendRow.append("text")
+            .attr("x", 15)
+            .attr("y", 4)
+            .style("font-size", "12px")
+            .style("font-family", "sans-serif")
+            .style("fill", "#94a3b8") // Slate-400 for better visibility on dark bg
+            .text(group);
     });
 
     function drag(simulation) {
