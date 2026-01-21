@@ -207,3 +207,21 @@ Uses n-gram windowing to extract phrases surrounding key entities (ORG, GPE, PER
 - **Output**: Pairs of `entity_word` and `framing_phrase`.
 
 
+## Web Dashboard
+
+The project includes a **Visual Analytics Dashboard** located in the `web/` directory.
+
+### Quick Start
+```bash
+# Start the API server
+./venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+Visit **[http://localhost:8000](http://localhost:8000)** to access the interface.
+
+### Features
+- **Trend Analysis**: Monitor sentiment changes over time.
+- **Network Graph**: Explore connections between entities (politicians, organizations, etc.).
+- **Fraing Analysis**: Identify dominant phrases associated with entities.
+- **Interactive Filtering**: Filter by date, entity type, and exclude specific terms.
+
+For detailed documentation, see [web/README.md](web/README.md).
