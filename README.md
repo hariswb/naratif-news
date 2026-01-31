@@ -20,7 +20,18 @@ The pipeline:
 - Python 3.8+
 - Docker and Docker Compose (for PostgreSQL)
 
-### Database Setup
+### 1. Setup Phase
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Database Setup
 
 1. **Start PostgreSQL**:
     ```bash
@@ -32,23 +43,6 @@ The pipeline:
     ```bash
     alembic upgrade head
     ```
-
-3. **Verify Connection**:
-    You can check if the setup is correct by running:
-    ```bash
-    python tests/test_db_connection.py
-    ```
-
-### 2. Setup Phase
-
-```bash
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
 
 ### 3. Configuration
 The project uses `config/rss_sources.json` for source definitions.
@@ -124,9 +118,7 @@ media-pipeline/
 │   ├── parse/            # XML to JSONL
 │   ├── clean/            # Text Normalization
 │   ├── signal/           # Sentiment Analysis, NER, Framing Phrase Extraction
-│   ├── aggregate/        # [Unimplemented] Aggregation
-│   └── narrative/        # [Unimplemented] Narrative generation
-├── sql/                  # Database schema
+├── web/                  # Web application
 └── requirements.txt
 ```
 
